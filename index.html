@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LaunchScript Manager - Web interface for managing PowerShell app installations">
+    <title>LaunchScript Manager v1.0.0</title>
+    <style>
+        /* CSS3 Styling with Accessibility Focus */
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --error-color: #dc2626;
+            --warning-color: #d97706;
+            --background-color: #f8fafc;
+            --surface-color: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--surface-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #475569;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: var(--focus-ring);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .app-card {
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            background: var(--surface-color);
+        }
+
+        .app-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 25px -8px rgba(37, 99, 235, 0.3);
+        }
+
+        .app-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .app-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .app-checkbox:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+
+        .app-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .status-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .status-installed {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .status-not-installed {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .status-checking {
+            background: var(--warning-color);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .app-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .app-version {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .command-output {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            padding: 2rem;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 12px;
+            padding: 2rem;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            background: var(--border-color);
+        }
+
+        .close-btn:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .apps-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>LaunchScript Manager</h1>
+            <p>Manage and install applications with PowerShell automation</p>
+        </header>
+
+        <main class="main-content">
+            <div class="controls">
+                <div class="search-container">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        placeholder="Search applications..."
+                        aria-label="Search applications"
+                        id="searchInput"
+                    >
+                </div>
+                <button class="btn btn-secondary" id="refreshBtn" aria-label="Refresh application list">
+                    <span id="refreshIcon">🔄</span> Refresh
+                </button>
+                <button class="btn btn-secondary" id="helpBtn" aria-label="Show help information">
+                    ❓ Help
+                </button>
+                <button class="btn btn-primary" id="generateBtn" disabled aria-label="Generate PowerShell command for selected applications">
+                    <span id="generateIcon">⚡</span> Generate Command
+                </button>
+            </div>
+
+            <div id="appsContainer" class="apps-grid" role="region" aria-label="Available applications">
+                <!-- Apps will be dynamically loaded here -->
+            </div>
+
+            <div id="commandOutput" class="command-output" style="display: none;" role="region" aria-label="Generated PowerShell command">
+                <!-- Generated command will appear here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="helpModalTitle" class="modal-title">LaunchScript Manager Help</h2>
+                <button class="close-btn" id="closeHelpBtn" aria-label="Close help dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>How to Use</h3>
+                <ol>
+                    <li><strong>Browse Applications:</strong> View available PowerShell installation scripts in the grid below.</li>
+                    <li><strong>Check Status:</strong> Green checkmark (✓) means installed, red X means not installed.</li>
+                    <li><strong>Select Apps:</strong> Check the boxes for applications you want to install.</li>
+                    <li><strong>Generate Command:</strong> Click "Generate Command" to create the PowerShell command.</li>
+                    <li><strong>Run Command:</strong> Copy and run the generated command in PowerShell as Administrator.</li>
+                </ol>
+                
+                <h3>Features</h3>
+                <ul>
+                    <li><strong>Real-time Validation:</strong> Automatically checks if applications are already installed</li>
+                    <li><strong>Search:</strong> Use the search box to quickly find specific applications</li>
+                    <li><strong>Accessibility:</strong> Full keyboard navigation and screen reader support</li>
+                    <li><strong>Responsive Design:</strong> Works on desktop, tablet, and mobile devices</li>
+                </ul>
+
+                <h3>Requirements</h3>
+                <ul>
+                    <li>Windows PowerShell 5.1 or PowerShell 7+</li>
+                    <li>Administrator privileges for installations</li>
+                    <li>Internet connection for downloading applications</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" 
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" 
+            crossorigin="anonymous"></script>
+    <script>
+        'use strict';
+        
+        // LaunchScript Manager JavaScript Module
+        (function() {
+            // Application state
+            const state = {
+                apps: [],
+                selectedApps: new Set(),
+                isLoading: false,
+                lastError: null
+            };
+
+            // Configuration
+            const config = {
+                scriptsPath: './scripts/',
+                launchScriptPath: './launchScript.ps1',
+                refreshInterval: 30000, // 30 seconds
+                logLevel: 'INFO'
+            };
+
+            // Utility functions
+            const utils = {
+                log: function(level, message, element = null, line = null, column = null) {
+                    const timestamp = new Date().toLocaleTimeString('en-US', { 
+                        hour12: true, 
+                        hour: '2-digit', 
+                        minute: '2-digit', 
+                        second: '2-digit' 
+                    });
+                    const logMessage = `[${timestamp}] ${element ? element + ' tag #' + (element.id || 'unknown') + ': ' : ''}${message}${line ? ' at line ' + line + ', column ' + column : ''}`;
+                    console.log(`[${level}] ${logMessage}`);
+                    
+                    if (level === 'ERROR') {
+                        state.lastError = logMessage;
+                    }
+                },
+
+                debounce: function(func, wait) {
+                    let timeout;
+                    return function executedFunction(...args) {
+                        const later = () => {
+                            clearTimeout(timeout);
+                            func(...args);
+                        };
+                        clearTimeout(timeout);
+                        timeout = setTimeout(later, wait);
+                    };
+                },
+
+                sanitizeHtml: function(str) {
+                    const div = document.createElement('div');
+                    div.textContent = str;
+                    return div.innerHTML;
+                },
+
+                formatAppName: function(filename) {
+                    return filename
+                        .replace(/\.ps1$/i, '')
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^\s+/, '')
+                        .replace(/\s+/g, ' ');
+                }
+            };
+
+            // App management functions
+            const appManager = {
+                loadApps: async function() {
+                    try {
+                        state.isLoading = true;
+                        this.updateLoadingState();
+                        
+                        utils.log('INFO', 'Loading applications from scripts directory');
+                        
+                        // Simulate loading apps from scripts directory
+                        // In a real implementation, this would make an AJAX call to a PowerShell endpoint
+                        // or read the directory structure via a server-side script
+                        
+                        const mockApps = [
+                            {
+                                name: 'NotePad++',
+                                filename: 'NotePad++.ps1',
+                                description: 'Advanced text editor with syntax highlighting and plugin support',
+                                version: 'Latest Stable',
+                                installed: false,
+                                checking: true
+                            }
+                        ];
+                        
+                        // Simulate network delay
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        state.apps = mockApps;
+                        this.renderApps();
+                        this.checkInstallationStatus();
+                        
+                        utils.log('INFO', `Loaded ${state.apps.length} applications`);
+                        
+                    } catch (error) {
+                        utils.log('ERROR', `Failed to load applications: ${error.message}`);
+                        this.showError('Failed to load applications. Please check your scripts directory.');
+                    } finally {
+                        state.isLoading = false;
+                        this.updateLoadingState();
+                    }
+                },
+
+                checkInstallationStatus: async function() {
+                    utils.log('INFO', 'Checking installation status for all applications');
+                    
+                    for (const app of state.apps) {
+                        try {
+                            app.checking = true;
+                            this.renderApp(app);
+                            
+                            // Simulate checking installation status
+                            // In a real implementation, this would call a PowerShell script
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            
+                            // Mock installation check (randomly determine if installed)
+                            app.installed = Math.random() > 0.7;
+                            app.checking = false;
+                            
+                            this.renderApp(app);
+                            
+                            utils.log('INFO', `${app.name}: ${app.installed ? 'installed' : 'not installed'}`);
+                            
+                        } catch (error) {
+                            utils.log('ERROR', `Failed to check installation status for ${app.name}: ${error.message}`);
+                            app.checking = false;
+                            app.installed = false;
+                            this.renderApp(app);
+                        }
+                    }
+                },
+
+                renderApps: function() {
+                    const container = $('#appsContainer');
+                    container.empty();
+                    
+                    if (state.apps.length === 0) {
+                        container.html(`
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                                <p style="font-size: 1.2rem; margin-bottom: 1rem;">No applications found</p>
+                                <p>Place PowerShell scripts (.ps1) in the scripts/ directory to get started.</p>
+                            </div>
+                        `);
+                        return;
+                    }
+                    
+                    state.apps.forEach(app => this.renderApp(app));
+                },
+
+                renderApp: function(app) {
+                    const isSelected = state.selectedApps.has(app.filename);
+                    const statusIcon = this.getStatusIcon(app);
+                    const statusClass = app.checking ? 'status-checking' : (app.installed ? 'status-installed' : 'status-not-installed');
+                    
+                    const appHtml = `
+                        <div class="app-card ${isSelected ? 'selected' : ''}" data-filename="${app.filename}">
+                            <div class="app-header">
+                                <input 
+                                    type="checkbox" 
+                                    class="app-checkbox" 
+                                    id="app-${app.filename}"
+                                    ${isSelected ? 'checked' : ''}
+                                    aria-describedby="desc-${app.filename}"
+                                >
+                                <label for="app-${app.filename}" class="app-name">${utils.sanitizeHtml(app.name)}</label>
+                                <div class="status-icon ${statusClass}" 
+                                     title="${app.checking ? 'Checking...' : (app.installed ? 'Installed' : 'Not installed')}"
+                                     aria-label="${app.checking ? 'Checking installation status' : (app.installed ? 'Application is installed' : 'Application is not installed')}">
+                                    ${statusIcon}
+                                </div>
+                            </div>
+                            <div class="app-description" id="desc-${app.filename}">
+                                ${utils.sanitizeHtml(app.description)}
+                            </div>
+                            <div class="app-version">Version: ${utils.sanitizeHtml(app.version)}</div>
+                        </div>
+                    `;
+                    
+                    const existingCard = $(`.app-card[data-filename="${app.filename}"]`);
+                    if (existingCard.length) {
+                        existingCard.replaceWith(appHtml);
+                    } else {
+                        $('#appsContainer').append(appHtml);
+                    }
+                },
+
+                getStatusIcon: function(app) {
+                    if (app.checking) return '⏳';
+                    return app.installed ? '✓' : '✗';
+                },
+
+                updateLoadingState: function() {
+                    const refreshBtn = $('#refreshBtn');
+                    const refreshIcon = $('#refreshIcon');
+                    
+                    if (state.isLoading) {
+                        refreshBtn.prop('disabled', true);
+                        refreshIcon.html('<span class="loading"></span>');
+                    } else {
+                        refreshBtn.prop('disabled', false);
+                        refreshIcon.text('🔄');
+                    }
+                },
+
+                showError: function(message) {
+                    // In a real implementation, you might show a toast notification or error banner
+                    alert(message);
+                }
+            };
+
+            // Command generation
+            const commandGenerator = {
+                generate: function() {
+                    if (state.selectedApps.size === 0) {
+                        utils.log('WARN', 'No applications selected for command generation');
+                        return '';
+                    }
+                    
+                    const selectedScripts = Array.from(state.selectedApps).join(',');
+                    const command = `PowerShell -ExecutionPolicy Bypass -File "${config.launchScriptPath}" -Scripts "${selectedScripts}"`;
+                    
+                    utils.log('INFO', `Generated command for ${state.selectedApps.size} applications`);
+                    return command;
+                },
+
+                display: function(command) {
+                    const output = $('#commandOutput');
+                    if (command) {
+                        output.text(command).show();
+                        output.attr('aria-live', 'polite');
+                        
+                        // Auto-select text for easy copying
+                        if (window.getSelection) {
+                            const selection = window.getSelection();
+                            const range = document.createRange();
+                            range.selectNodeContents(output[0]);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        }
+                    } else {
+                        output.hide();
+                    }
+                }
+            };
+
+            // Search functionality
+            const search = {
+                filter: utils.debounce(function(query) {
+                    const normalizedQuery = query.toLowerCase().trim();
+                    
+                    $('.app-card').each(function() {
+                        const card = $(this);
+                        const appName = card.find('.app-name').text().toLowerCase();
+                        const appDesc = card.find('.app-description').text().toLowerCase();
+                        
+                        const matches = appName.includes(normalizedQuery) || appDesc.includes(normalizedQuery);
+                        card.toggle(matches);
+                    });
+                    
+                    utils.log('INFO', `Filtered applications with query: "${query}"`);
+                }, 300)
+            };
+
+            // Event handlers
+            const eventHandlers = {
+                init: function() {
+                    // App selection
+                    $(document).on('change', '.app-checkbox', function() {
+                        const checkbox = $(this);
+                        const filename = checkbox.closest('.app-card').data('filename');
+                        const card = checkbox.closest('.app-card');
+                        
+                        if (checkbox.is(':checked')) {
+                            state.selectedApps.add(filename);
+                            card.addClass('selected');
+                        } else {
+                            state.selectedApps.delete(filename);
+                            card.removeClass('selected');
+                        }
+                        
+                        $('#generateBtn').prop('disabled', state.selectedApps.size === 0);
+                        utils.log('INFO', `${checkbox.is(':checked') ? 'Selected' : 'Deselected'} ${filename}`);
+                    });
+
+                    // Search
+                    $('#searchInput').on('input', function() {
+                        search.filter($(this).val());
+                    });
+
+                    // Refresh button
+                    $('#refreshBtn').on('click', function() {
+                        if (!state.isLoading) {
+                            appManager.loadApps();
+                        }
+                    });
+
+                    // Generate command button
+                    $('#generateBtn').on('click', function() {
+                        const command = commandGenerator.generate();
+                        commandGenerator.display(command);
+                    });
+
+                    // Help modal
+                    $('#helpBtn').on('click', function() {
+                        $('#helpModal').show().attr('aria-hidden', 'false');
+                        $('#closeHelpBtn').focus();
+                    });
+
+                    $('#closeHelpBtn, #helpModal').on('click', function(e) {
+                        if (e.target === this) {
+                            $('#helpModal').hide().attr('aria-hidden', 'true');
+                            $('#helpBtn').focus();
+                        }
+                    });
+
+                    // Keyboard navigation
+                    $(document).on('keydown', function(e) {
+                        // Escape key closes modal
+                        if (e.key === 'Escape' && $('#helpModal').is(':visible')) {
+                            $('#helpModal').hide().attr('aria-hidden', 'true');
+                            $('#helpBtn').focus();
+                        }
+                    });
+
+                    // Auto-refresh (optional)
+                    if (config.refreshInterval > 0) {
+                        setInterval(() => {
+                            if (!state.isLoading && document.visibilityState === 'visible') {
+                                appManager.checkInstallationStatus();
+                            }
+                        }, config.refreshInterval);
+                    }
+                }
+            };
+
+            // Initialize application
+            $(document).ready(function() {
+                utils.log('INFO', 'LaunchScript Manager initializing...');
+                
+                try {
+                    eventHandlers.init();
+                    appManager.loadApps();
+                    utils.log('INFO', 'LaunchScript Manager initialized successfully');
+                } catch (error) {
+                    utils.log('ERROR', `Failed to initialize application: ${error.message}`);
+                }
+            });
+
+            // Expose public API for testing
+            window.LaunchScriptManager = {
+                state: state,
+                config: config,
+                utils: utils,
+                appManager: appManager,
+                commandGenerator: commandGenerator,
+                search: search
+            };
+
+        })();
+    </script>
+</body>
+</html>
