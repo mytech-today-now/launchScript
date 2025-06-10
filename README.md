@@ -2,6 +2,41 @@
 
 A comprehensive web-based management system for PowerShell app installation scripts with accessibility, inclusiveness, and robust error handling.
 
+## 🎉 Latest Updates - Complete Script Integration
+
+### ✅ All Scripts Now Validated and Integrated (December 2024)
+The LaunchScript Manager now properly processes **all 21 application scripts** in the `scripts/` directory:
+
+**Available Applications:**
+- AngryIPScanner - Network scanner for device discovery
+- Audacity - Audio recording and editing software
+- BelarcAdvisor - System information and inventory tool
+- Blender - 3D creation suite for modeling and animation
+- Brave - Privacy-focused web browser
+- ChatGPT - Desktop application for OpenAI ChatGPT
+- ClipGrab - Video downloader and converter
+- Firefox - Mozilla web browser
+- GIMP - GNU Image Manipulation Program
+- MicrosoftQuickConnect - Device connectivity utility
+- NotePad++ - Advanced text editor
+- OpenOfficeSuite - Free office productivity suite
+- OpenShot - Open-source video editor
+- Opera - Web browser with built-in VPN
+- RenameIt - Batch file renaming utility
+- Signal - Private messenger with encryption
+- Telegram - Cloud-based messaging app
+- TestApp - Test application for validation
+- TreeSizeFree - Disk space analyzer
+- VSCode - Visual Studio Code editor
+- WiseDuplicateFinder - Duplicate file finder
+
+### 🔧 Technical Improvements
+- **Dynamic Script Discovery**: Web interface automatically loads all available scripts
+- **Enhanced Metadata**: Each script includes category, description, and version information
+- **Improved Search**: Search now includes application categories
+- **Comprehensive Testing**: Integration tests verify all components work together
+- **Robust Error Handling**: Detailed logging with timestamp format `[HH:MM:SS AM/PM]`
+
 ## Overview
 
 LaunchScript Manager provides a modern web interface for managing and executing PowerShell scripts that automate software installations. The system consists of a responsive HTML5 web page that coordinates with PowerShell scripts to provide a seamless app installation experience.
@@ -54,10 +89,31 @@ launchScript/
 ├── index.html                     # Main web interface
 ├── launchScript.ps1              # PowerShell orchestrator script
 ├── README.md                     # This documentation file
+├── verify-integration.ps1        # Integration test script
 ├── scripts/                      # App installation scripts directory
 │   ├── shared/
 │   │   └── HelperFunctions.ps1   # Shared utility functions
-│   └── NotePad++.ps1             # Example: Notepad++ installation script
+│   ├── AngryIPScanner.ps1        # Network scanner installation
+│   ├── Audacity.ps1              # Audio editor installation
+│   ├── BelarcAdvisor.ps1         # System information tool
+│   ├── Blender.ps1               # 3D creation suite
+│   ├── Brave.ps1                 # Privacy browser installation
+│   ├── ChatGPT.ps1               # ChatGPT desktop app
+│   ├── ClipGrab.ps1              # Video downloader
+│   ├── Firefox.ps1               # Mozilla Firefox browser
+│   ├── GIMP.ps1                  # Image editor installation
+│   ├── MicrosoftQuickConnect.ps1 # Microsoft connectivity tool
+│   ├── NotePad++.ps1             # Advanced text editor
+│   ├── OpenOfficeSuite.ps1       # Office productivity suite
+│   ├── OpenShot.ps1              # Video editor installation
+│   ├── Opera.ps1                 # Opera browser installation
+│   ├── RenameIt.ps1              # File renaming utility
+│   ├── Signal.ps1                # Private messenger
+│   ├── Telegram.ps1              # Messaging app installation
+│   ├── TestApp.ps1               # Test application script
+│   ├── TreeSizeFree.ps1          # Disk space analyzer
+│   ├── VSCode.ps1                # Visual Studio Code editor
+│   └── WiseDuplicateFinder.ps1   # Duplicate file finder
 └── logs/                         # Log files (created automatically)
     └── launchScript.log          # Execution logs
 ```

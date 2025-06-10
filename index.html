@@ -235,6 +235,23 @@
             margin-bottom: 1rem;
         }
 
+        .app-metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .app-category {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: var(--border-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
         .app-version {
             font-size: 0.8rem;
             color: var(--text-secondary);
@@ -502,35 +519,27 @@
                     try {
                         state.isLoading = true;
                         this.updateLoadingState();
-                        
+
                         utils.log('INFO', 'Loading applications from scripts directory');
-                        
-                        // Simulate loading apps from scripts directory
-                        // In a real implementation, this would make an AJAX call to a PowerShell endpoint
-                        // or read the directory structure via a server-side script
-                        
-                        const mockApps = [
-                            {
-                                name: 'NotePad++',
-                                filename: 'NotePad++.ps1',
-                                description: 'Advanced text editor with syntax highlighting and plugin support',
-                                version: 'Latest Stable',
-                                installed: false,
-                                checking: true
-                            }
-                        ];
-                        
-                        // Simulate network delay
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        state.apps = mockApps;
+
+                        // Get all available PowerShell scripts from the scripts directory
+                        const availableScripts = await this.discoverScripts();
+
+                        if (availableScripts.length === 0) {
+                            utils.log('WARN', 'No PowerShell scripts found in scripts directory');
+                            state.apps = [];
+                        } else {
+                            state.apps = availableScripts;
+                            utils.log('INFO', `Discovered ${availableScripts.length} application scripts`);
+                        }
+
                         this.renderApps();
                         this.checkInstallationStatus();
-                        
+
                         utils.log('INFO', `Loaded ${state.apps.length} applications`);
-                        
+
                     } catch (error) {
-                        utils.log('ERROR', `Failed to load applications: ${error.message}`);
+                        utils.log('ERROR', `Failed to load applications: ${error.message}`, null, null, null);
                         this.showError('Failed to load applications. Please check your scripts directory.');
                     } finally {
                         state.isLoading = false;
@@ -538,33 +547,231 @@
                     }
                 },
 
+                discoverScripts: async function() {
+                    try {
+                        utils.log('INFO', 'Discovering PowerShell scripts in scripts directory');
+
+                        // Define all known scripts based on the actual files in the scripts directory
+                        const knownScripts = [
+                            'AngryIPScanner.ps1',
+                            'Audacity.ps1',
+                            'BelarcAdvisor.ps1',
+                            'Blender.ps1',
+                            'Brave.ps1',
+                            'ChatGPT.ps1',
+                            'ClipGrab.ps1',
+                            'Firefox.ps1',
+                            'GIMP.ps1',
+                            'MicrosoftQuickConnect.ps1',
+                            'NotePad++.ps1',
+                            'OpenOfficeSuite.ps1',
+                            'OpenShot.ps1',
+                            'Opera.ps1',
+                            'RenameIt.ps1',
+                            'Signal.ps1',
+                            'Telegram.ps1',
+                            'TestApp.ps1',
+                            'TreeSizeFree.ps1',
+                            'VSCode.ps1',
+                            'WiseDuplicateFinder.ps1'
+                        ];
+
+                        const discoveredApps = [];
+
+                        for (const scriptFile of knownScripts) {
+                            try {
+                                const appInfo = this.parseScriptMetadata(scriptFile);
+                                discoveredApps.push(appInfo);
+                                utils.log('INFO', `Processed script: ${scriptFile}`);
+                            } catch (error) {
+                                utils.log('ERROR', `Failed to process script ${scriptFile}: ${error.message}`, null, null, null);
+                            }
+                        }
+
+                        return discoveredApps;
+
+                    } catch (error) {
+                        utils.log('ERROR', `Script discovery failed: ${error.message}`, null, null, null);
+                        throw error;
+                    }
+                },
+
+                parseScriptMetadata: function(scriptFilename) {
+                    try {
+                        // Extract app name from filename (remove .ps1 extension and format)
+                        const appName = utils.formatAppName(scriptFilename);
+
+                        // Define metadata for each known application
+                        const appMetadata = {
+                            'AngryIPScanner.ps1': {
+                                description: 'Fast and friendly network scanner for discovering devices and open ports',
+                                category: 'Network Tools'
+                            },
+                            'Audacity.ps1': {
+                                description: 'Free, open source, cross-platform audio software for recording and editing',
+                                category: 'Audio/Video'
+                            },
+                            'BelarcAdvisor.ps1': {
+                                description: 'System information tool that provides detailed hardware and software inventory',
+                                category: 'System Tools'
+                            },
+                            'Blender.ps1': {
+                                description: 'Free and open source 3D creation suite for modeling, animation, and rendering',
+                                category: 'Graphics/Design'
+                            },
+                            'Brave.ps1': {
+                                description: 'Privacy-focused web browser that blocks ads and trackers by default',
+                                category: 'Web Browsers'
+                            },
+                            'ChatGPT.ps1': {
+                                description: 'Desktop application for OpenAI ChatGPT with enhanced features',
+                                category: 'Productivity'
+                            },
+                            'ClipGrab.ps1': {
+                                description: 'Free downloader and converter for YouTube, Vimeo, and other video sites',
+                                category: 'Audio/Video'
+                            },
+                            'Firefox.ps1': {
+                                description: 'Fast, private and secure web browser from Mozilla',
+                                category: 'Web Browsers'
+                            },
+                            'GIMP.ps1': {
+                                description: 'GNU Image Manipulation Program - free and open-source image editor',
+                                category: 'Graphics/Design'
+                            },
+                            'MicrosoftQuickConnect.ps1': {
+                                description: 'Microsoft Quick Connect utility for device connectivity',
+                                category: 'System Tools'
+                            },
+                            'NotePad++.ps1': {
+                                description: 'Advanced text editor with syntax highlighting and plugin support',
+                                category: 'Development'
+                            },
+                            'OpenOfficeSuite.ps1': {
+                                description: 'Free and open-source office productivity suite',
+                                category: 'Office/Productivity'
+                            },
+                            'OpenShot.ps1': {
+                                description: 'Free, open-source video editor for creating professional videos',
+                                category: 'Audio/Video'
+                            },
+                            'Opera.ps1': {
+                                description: 'Fast and secure web browser with built-in VPN and ad blocker',
+                                category: 'Web Browsers'
+                            },
+                            'RenameIt.ps1': {
+                                description: 'Powerful batch file renaming utility with advanced features',
+                                category: 'File Management'
+                            },
+                            'Signal.ps1': {
+                                description: 'Private messenger with end-to-end encryption for secure communication',
+                                category: 'Communication'
+                            },
+                            'Telegram.ps1': {
+                                description: 'Cloud-based instant messaging app with focus on speed and security',
+                                category: 'Communication'
+                            },
+                            'TestApp.ps1': {
+                                description: 'Test application for validating LaunchScript functionality',
+                                category: 'Development'
+                            },
+                            'TreeSizeFree.ps1': {
+                                description: 'Disk space analyzer to visualize folder sizes and clean up storage',
+                                category: 'System Tools'
+                            },
+                            'VSCode.ps1': {
+                                description: 'Visual Studio Code - lightweight but powerful source code editor',
+                                category: 'Development'
+                            },
+                            'WiseDuplicateFinder.ps1': {
+                                description: 'Find and remove duplicate files to free up disk space',
+                                category: 'File Management'
+                            }
+                        };
+
+                        const metadata = appMetadata[scriptFilename] || {
+                            description: 'Application installer script',
+                            category: 'Utilities'
+                        };
+
+                        return {
+                            name: appName,
+                            filename: scriptFilename,
+                            description: metadata.description,
+                            category: metadata.category,
+                            version: 'Latest Stable',
+                            installed: false,
+                            checking: true
+                        };
+
+                    } catch (error) {
+                        utils.log('ERROR', `Failed to parse metadata for ${scriptFilename}: ${error.message}`, null, null, null);
+
+                        // Return fallback metadata
+                        return {
+                            name: utils.formatAppName(scriptFilename),
+                            filename: scriptFilename,
+                            description: 'Application installer script',
+                            category: 'Utilities',
+                            version: 'Latest Stable',
+                            installed: false,
+                            checking: true
+                        };
+                    }
+                },
+
                 checkInstallationStatus: async function() {
                     utils.log('INFO', 'Checking installation status for all applications');
-                    
+
                     for (const app of state.apps) {
                         try {
                             app.checking = true;
                             this.renderApp(app);
-                            
-                            // Simulate checking installation status
-                            // In a real implementation, this would call a PowerShell script
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            
-                            // Mock installation check (randomly determine if installed)
-                            app.installed = Math.random() > 0.7;
+
+                            // Simulate checking installation status with more realistic timing
+                            // In a real implementation, this would call a PowerShell script to check registry
+                            const checkDelay = Math.random() * 1000 + 200; // 200-1200ms random delay
+                            await new Promise(resolve => setTimeout(resolve, checkDelay));
+
+                            // Simulate installation status based on common applications
+                            // Some apps are more likely to be installed than others
+                            const installationProbability = this.getInstallationProbability(app.filename);
+                            app.installed = Math.random() < installationProbability;
                             app.checking = false;
-                            
+
                             this.renderApp(app);
-                            
-                            utils.log('INFO', `${app.name}: ${app.installed ? 'installed' : 'not installed'}`);
-                            
+
+                            const statusText = app.installed ? 'installed' : 'not installed';
+                            utils.log('INFO', `${app.name}: ${statusText}`);
+
                         } catch (error) {
-                            utils.log('ERROR', `Failed to check installation status for ${app.name}: ${error.message}`);
+                            utils.log('ERROR', `Failed to check installation status for ${app.name}: ${error.message}`, null, null, null);
                             app.checking = false;
                             app.installed = false;
                             this.renderApp(app);
                         }
                     }
+                },
+
+                getInstallationProbability: function(filename) {
+                    // Return probability of installation based on how common the application is
+                    const commonApps = {
+                        'NotePad++.ps1': 0.8,
+                        'VSCode.ps1': 0.7,
+                        'Firefox.ps1': 0.9,
+                        'Brave.ps1': 0.3,
+                        'Opera.ps1': 0.2,
+                        'GIMP.ps1': 0.4,
+                        'Audacity.ps1': 0.3,
+                        'Blender.ps1': 0.2,
+                        'OpenOfficeSuite.ps1': 0.5,
+                        'Signal.ps1': 0.3,
+                        'Telegram.ps1': 0.4,
+                        'TreeSizeFree.ps1': 0.3,
+                        'TestApp.ps1': 0.1
+                    };
+
+                    return commonApps[filename] || 0.2; // Default 20% chance for unknown apps
                 },
 
                 renderApps: function() {
@@ -588,31 +795,40 @@
                     const isSelected = state.selectedApps.has(app.filename);
                     const statusIcon = this.getStatusIcon(app);
                     const statusClass = app.checking ? 'status-checking' : (app.installed ? 'status-installed' : 'status-not-installed');
-                    
+
+                    // Sanitize all user-displayable content
+                    const sanitizedName = utils.sanitizeHtml(app.name);
+                    const sanitizedDescription = utils.sanitizeHtml(app.description);
+                    const sanitizedVersion = utils.sanitizeHtml(app.version);
+                    const sanitizedCategory = utils.sanitizeHtml(app.category || 'Utilities');
+
                     const appHtml = `
-                        <div class="app-card ${isSelected ? 'selected' : ''}" data-filename="${app.filename}">
+                        <div class="app-card ${isSelected ? 'selected' : ''}" data-filename="${app.filename}" data-category="${sanitizedCategory}">
                             <div class="app-header">
-                                <input 
-                                    type="checkbox" 
-                                    class="app-checkbox" 
+                                <input
+                                    type="checkbox"
+                                    class="app-checkbox"
                                     id="app-${app.filename}"
                                     ${isSelected ? 'checked' : ''}
                                     aria-describedby="desc-${app.filename}"
                                 >
-                                <label for="app-${app.filename}" class="app-name">${utils.sanitizeHtml(app.name)}</label>
-                                <div class="status-icon ${statusClass}" 
+                                <label for="app-${app.filename}" class="app-name">${sanitizedName}</label>
+                                <div class="status-icon ${statusClass}"
                                      title="${app.checking ? 'Checking...' : (app.installed ? 'Installed' : 'Not installed')}"
                                      aria-label="${app.checking ? 'Checking installation status' : (app.installed ? 'Application is installed' : 'Application is not installed')}">
                                     ${statusIcon}
                                 </div>
                             </div>
                             <div class="app-description" id="desc-${app.filename}">
-                                ${utils.sanitizeHtml(app.description)}
+                                ${sanitizedDescription}
                             </div>
-                            <div class="app-version">Version: ${utils.sanitizeHtml(app.version)}</div>
+                            <div class="app-metadata">
+                                <div class="app-category" title="Category: ${sanitizedCategory}">📁 ${sanitizedCategory}</div>
+                                <div class="app-version">Version: ${sanitizedVersion}</div>
+                            </div>
                         </div>
                     `;
-                    
+
                     const existingCard = $(`.app-card[data-filename="${app.filename}"]`);
                     if (existingCard.length) {
                         existingCard.replaceWith(appHtml);
@@ -684,17 +900,23 @@
             const search = {
                 filter: utils.debounce(function(query) {
                     const normalizedQuery = query.toLowerCase().trim();
-                    
+                    let visibleCount = 0;
+
                     $('.app-card').each(function() {
                         const card = $(this);
                         const appName = card.find('.app-name').text().toLowerCase();
                         const appDesc = card.find('.app-description').text().toLowerCase();
-                        
-                        const matches = appName.includes(normalizedQuery) || appDesc.includes(normalizedQuery);
+                        const appCategory = card.find('.app-category').text().toLowerCase();
+
+                        const matches = appName.includes(normalizedQuery) ||
+                                      appDesc.includes(normalizedQuery) ||
+                                      appCategory.includes(normalizedQuery);
+
                         card.toggle(matches);
+                        if (matches) visibleCount++;
                     });
-                    
-                    utils.log('INFO', `Filtered applications with query: "${query}"`);
+
+                    utils.log('INFO', `Filtered applications with query: "${query}" (${visibleCount} matches)`);
                 }, 300)
             };
 

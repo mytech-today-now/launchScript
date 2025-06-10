@@ -194,3 +194,97 @@ Overall Status: SUCCESS
 
 [2025-06-10 11:22:32] [SUCCESS] All scripts completed successfully!
 [2025-06-10 11:22:32] [INFO] Log file saved: ./logs/launchScript.log
+================================================================================
+LaunchScript Manager Execution Log
+Started: 2025-06-10 15:52:30
+User: kyle_
+Computer: MTT-DESKTOP
+PowerShell Version: 5.1.26100.4202
+Scripts Requested: NotePad++,VSCode
+================================================================================
+
+[2025-06-10 15:52:30] [INFO] Checking system prerequisites...
+[2025-06-10 15:52:30] [SUCCESS] PowerShell version check passed: 5.1.26100.4202
+[2025-06-10 15:52:30] [WARN] Warning: Not running as Administrator. Some installations may fail.
+[2025-06-10 15:52:30] [SUCCESS] Scripts directory found: ./scripts/
+[2025-06-10 15:52:30] [SUCCESS] Internet connectivity confirmed
+[2025-06-10 15:52:30] [INFO] Requested scripts: NotePad++, VSCode
+[2025-06-10 15:52:30] [INFO] Found 21 available scripts in ./scripts/
+[2025-06-10 15:52:30] [SUCCESS] Validated script: NotePad++.ps1
+[2025-06-10 15:52:30] [SUCCESS] Validated script: VSCode.ps1
+[2025-06-10 15:52:30] [INFO] Beginning batch execution of 2 scripts
+[2025-06-10 15:52:30] [INFO] [1/2] Processing: NotePad++.ps1
+[2025-06-10 15:52:30] [INFO] Starting execution of: NotePad++.ps1
+[2025-06-10 15:52:30] [INFO] TESTRUN: Would execute script: .\scripts\NotePad++.ps1
+[2025-06-10 15:52:30] [INFO] [2/2] Processing: VSCode.ps1
+[2025-06-10 15:52:30] [INFO] Starting execution of: VSCode.ps1
+[2025-06-10 15:52:30] [INFO] TESTRUN: Would execute script: .\scripts\VSCode.ps1
+[2025-06-10 15:52:30] [INFO] 
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Start Time: 2025-06-10 15:52:30
+End Time: 2025-06-10 15:52:30
+Total Duration: 00:00:00
+
+Scripts Processed: 0
+Successful: 0
+Failed: 0
+Skipped: 0
+
+Overall Status: SUCCESS
+================================================================================
+
+[2025-06-10 15:52:30] [SUCCESS] All scripts completed successfully!
+[2025-06-10 15:52:30] [INFO] Log file saved: ./logs/launchScript.log
+================================================================================
+LaunchScript Manager Execution Log
+Started: 2025-06-10 15:53:30
+User: kyle_
+Computer: MTT-DESKTOP
+PowerShell Version: 5.1.26100.4202
+Scripts Requested: NotePad++,VSCode,Firefox,GIMP
+================================================================================
+
+[2025-06-10 15:53:30] [INFO] Checking system prerequisites...
+[2025-06-10 15:53:30] [SUCCESS] PowerShell version check passed: 5.1.26100.4202
+[2025-06-10 15:53:30] [WARN] Warning: Not running as Administrator. Some installations may fail.
+[2025-06-10 15:53:30] [SUCCESS] Scripts directory found: ./scripts/
+[2025-06-10 15:53:31] [SUCCESS] Internet connectivity confirmed
+[2025-06-10 15:53:31] [INFO] Requested scripts: NotePad++, VSCode, Firefox, GIMP
+[2025-06-10 15:53:31] [INFO] Found 21 available scripts in ./scripts/
+[2025-06-10 15:53:31] [SUCCESS] Validated script: NotePad++.ps1
+[2025-06-10 15:53:31] [SUCCESS] Validated script: VSCode.ps1
+[2025-06-10 15:53:31] [SUCCESS] Validated script: Firefox.ps1
+[2025-06-10 15:53:31] [SUCCESS] Validated script: GIMP.ps1
+[2025-06-10 15:53:31] [INFO] Beginning batch execution of 4 scripts
+[2025-06-10 15:53:31] [INFO] [1/4] Processing: NotePad++.ps1
+[2025-06-10 15:53:31] [INFO] Starting execution of: NotePad++.ps1
+[2025-06-10 15:53:31] [INFO] TESTRUN: Would execute script: .\scripts\NotePad++.ps1
+[2025-06-10 15:53:31] [INFO] [2/4] Processing: VSCode.ps1
+[2025-06-10 15:53:31] [INFO] Starting execution of: VSCode.ps1
+[2025-06-10 15:53:31] [INFO] TESTRUN: Would execute script: .\scripts\VSCode.ps1
+[2025-06-10 15:53:31] [INFO] [3/4] Processing: Firefox.ps1
+[2025-06-10 15:53:31] [INFO] Starting execution of: Firefox.ps1
+[2025-06-10 15:53:31] [INFO] TESTRUN: Would execute script: .\scripts\Firefox.ps1
+[2025-06-10 15:53:31] [INFO] [4/4] Processing: GIMP.ps1
+[2025-06-10 15:53:31] [INFO] Starting execution of: GIMP.ps1
+[2025-06-10 15:53:31] [INFO] TESTRUN: Would execute script: .\scripts\GIMP.ps1
+[2025-06-10 15:53:31] [INFO] 
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+Start Time: 2025-06-10 15:53:30
+End Time: 2025-06-10 15:53:31
+Total Duration: 00:00:00
+
+Scripts Processed: 0
+Successful: 0
+Failed: 0
+Skipped: 0
+
+Overall Status: SUCCESS
+================================================================================
+
+[2025-06-10 15:53:31] [SUCCESS] All scripts completed successfully!
+[2025-06-10 15:53:31] [INFO] Log file saved: ./logs/launchScript.log
