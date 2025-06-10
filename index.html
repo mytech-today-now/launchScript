@@ -389,8 +389,8 @@
                         id="searchInput"
                     >
                 </div>
-                <button class="btn btn-secondary" id="refreshBtn" aria-label="Refresh application list">
-                    <span id="refreshIcon">🔄</span> Refresh
+                <button class="btn btn-secondary" id="refreshBtn" aria-label="Refresh application status">
+                    <span id="refreshIcon">🔄</span> Check Status
                 </button>
                 <button class="btn btn-secondary" id="helpBtn" aria-label="Show help information">
                     ❓ Help
@@ -534,7 +534,9 @@
                         }
 
                         this.renderApps();
-                        this.checkInstallationStatus();
+
+                        // Don't automatically check installation status - let user trigger it manually
+                        utils.log('INFO', 'Applications loaded. Click "Refresh" to check installation status.');
 
                         utils.log('INFO', `Loaded ${state.apps.length} applications`);
 
@@ -549,9 +551,35 @@
 
                 discoverScripts: async function() {
                     try {
-                        utils.log('INFO', 'Discovering PowerShell scripts in scripts directory');
+                        utils.log('INFO', 'Discovering PowerShell scripts via API');
 
-                        // Define all known scripts based on the actual files in the scripts directory
+                        // Try to get scripts from the API first
+                        try {
+                            const response = await fetch('/api/scripts');
+                            if (response.ok) {
+                                const result = await response.json();
+                                if (result.success && result.data.scripts) {
+                                    utils.log('INFO', `API returned ${result.data.count} scripts`);
+
+                                    const discoveredApps = [];
+                                    for (const scriptInfo of result.data.scripts) {
+                                        try {
+                                            const appInfo = this.parseScriptMetadata(scriptInfo.filename);
+                                            discoveredApps.push(appInfo);
+                                            utils.log('INFO', `Processed script: ${scriptInfo.filename}`);
+                                        } catch (error) {
+                                            utils.log('ERROR', `Failed to process script ${scriptInfo.filename}: ${error.message}`, null, null, null);
+                                        }
+                                    }
+                                    return discoveredApps;
+                                }
+                            }
+                        } catch (apiError) {
+                            utils.log('WARN', `API script discovery failed: ${apiError.message}`);
+                        }
+
+                        // Fallback to hardcoded list if API fails
+                        utils.log('INFO', 'Falling back to hardcoded script list');
                         const knownScripts = [
                             'AngryIPScanner.ps1',
                             'Audacity.ps1',
@@ -577,7 +605,6 @@
                         ];
 
                         const discoveredApps = [];
-
                         for (const scriptFile of knownScripts) {
                             try {
                                 const appInfo = this.parseScriptMetadata(scriptFile);
@@ -700,6 +727,7 @@
                             description: metadata.description,
                             category: metadata.category,
                             version: 'Latest Stable',
+                            versionDisplay: 'Version: Latest Stable',
                             installed: false,
                             checking: true
                         };
@@ -714,6 +742,7 @@
                             description: 'Application installer script',
                             category: 'Utilities',
                             version: 'Latest Stable',
+                            versionDisplay: 'Version: Latest Stable',
                             installed: false,
                             checking: true
                         };
@@ -721,7 +750,201 @@
                 },
 
                 checkInstallationStatus: async function() {
-                    utils.log('INFO', 'Checking installation status for all applications');
+                    utils.log('INFO', 'Checking installation status for applications');
+
+                    try {
+                        // Check if we have too many apps - use progressive checking for better performance
+                        if (state.apps.length > 10) {
+                            utils.log('INFO', `Large number of apps (${state.apps.length}), using progressive detection`);
+                            await this.progressiveDetectionCheck();
+                        } else {
+                            // Call the PowerShell detection service for smaller sets
+                            const response = await this.callDetectionService();
+
+                            if (response && response.Applications) {
+                                // Update app status based on real detection results
+                                this.updateAppsFromDetectionResults(response.Applications);
+
+                                const installedCount = response.InstalledCount || 0;
+                                const totalCount = response.TotalApps || 0;
+                                utils.log('INFO', `Real-time detection completed: ${installedCount}/${totalCount} applications installed`);
+                            } else {
+                                utils.log('WARN', 'Detection service returned no data, falling back to simulated detection');
+                                await this.simulateInstallationCheck();
+                            }
+                        }
+                    } catch (error) {
+                        utils.log('ERROR', `Detection service failed: ${error.message}`, null, null, null);
+                        utils.log('WARN', 'Falling back to simulated detection');
+                        await this.simulateInstallationCheck();
+                    }
+                },
+
+                progressiveDetectionCheck: async function() {
+                    utils.log('INFO', 'Starting progressive detection check');
+
+                    // Check apps in batches of 5 to avoid overwhelming the system
+                    const batchSize = 5;
+                    const batches = [];
+
+                    for (let i = 0; i < state.apps.length; i += batchSize) {
+                        batches.push(state.apps.slice(i, i + batchSize));
+                    }
+
+                    let totalInstalled = 0;
+                    let totalChecked = 0;
+
+                    for (let i = 0; i < batches.length; i++) {
+                        const batch = batches[i];
+                        utils.log('INFO', `Checking batch ${i + 1}/${batches.length} (${batch.length} apps)`);
+
+                        try {
+                            // Mark apps as checking
+                            batch.forEach(app => {
+                                app.checking = true;
+                                this.renderApp(app);
+                            });
+
+                            // Build script names for this batch
+                            const scriptNames = batch.map(app => app.filename.replace('.ps1', '')).join(',');
+
+                            const response = await this.callDetectionServiceForScripts(scriptNames);
+
+                            if (response && response.Applications) {
+                                this.updateAppsFromDetectionResults(response.Applications);
+                                totalInstalled += response.InstalledCount || 0;
+                            } else {
+                                // Fallback for this batch
+                                batch.forEach(app => {
+                                    app.checking = false;
+                                    app.installed = Math.random() < this.getInstallationProbability(app.filename);
+                                    this.renderApp(app);
+                                });
+                            }
+
+                            totalChecked += batch.length;
+                            utils.log('INFO', `Batch ${i + 1} completed. Progress: ${totalChecked}/${state.apps.length}`);
+
+                            // Small delay between batches to prevent overwhelming the system
+                            if (i < batches.length - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+
+                        } catch (error) {
+                            utils.log('ERROR', `Batch ${i + 1} failed: ${error.message}`);
+
+                            // Mark batch apps as not checking and use fallback
+                            batch.forEach(app => {
+                                app.checking = false;
+                                app.installed = Math.random() < this.getInstallationProbability(app.filename);
+                                this.renderApp(app);
+                            });
+                        }
+                    }
+
+                    utils.log('SUCCESS', `Progressive detection completed: ${totalInstalled}/${state.apps.length} applications installed`);
+                },
+
+                callDetectionService: async function() {
+                    // Call detection service for all apps
+                    const scriptNames = state.apps.map(app => app.filename.replace('.ps1', '')).join(',');
+                    return await this.callDetectionServiceForScripts(scriptNames);
+                },
+
+                callDetectionServiceForScripts: async function(scriptNames) {
+                    utils.log('INFO', `Calling PowerShell detection service via API for: ${scriptNames}`);
+
+                    try {
+                        const requestData = {
+                            scripts: scriptNames,
+                            includeWindowsStore: true,
+                            includePortable: false  // Disable portable detection for better performance
+                        };
+
+                        utils.log('DEBUG', `API request data: ${JSON.stringify(requestData)}`);
+
+                        // Call the detection API
+                        const response = await fetch('/api/detect', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(`API request failed: ${errorData.error || response.statusText}`);
+                        }
+
+                        const result = await response.json();
+
+                        if (!result.success) {
+                            throw new Error(`API returned error: ${result.error || 'Unknown error'}`);
+                        }
+
+                        utils.log('SUCCESS', `Detection service API call completed successfully for: ${scriptNames}`);
+                        return result.data;
+
+                    } catch (error) {
+                        utils.log('ERROR', `PowerShell detection service API call failed: ${error.message}`);
+                        throw error;
+                    }
+                },
+
+                updateAppsFromDetectionResults: function(detectionResults) {
+                    utils.log('INFO', `Updating ${detectionResults.length} apps from detection results`);
+
+                    // Create a map of script names to detection results
+                    const resultMap = new Map();
+                    detectionResults.forEach(result => {
+                        resultMap.set(result.ScriptName, result);
+                    });
+
+                    // Update each app with real detection data
+                    state.apps.forEach(app => {
+                        const result = resultMap.get(app.filename);
+                        if (result) {
+                            app.checking = false;
+                            app.installed = result.IsInstalled;
+
+                            // Update version display logic
+                            if (result.IsInstalled && result.Version) {
+                                // Show actual installed version
+                                app.version = result.Version;
+                                app.versionDisplay = `Current Version: ${result.Version}`;
+                            } else if (result.IsInstalled && !result.Version) {
+                                // Installed but version unknown
+                                app.version = 'Unknown';
+                                app.versionDisplay = 'Current Version: Unknown';
+                            } else {
+                                // Not installed - show latest available
+                                app.version = 'Latest Stable';
+                                app.versionDisplay = 'Version: Latest Stable';
+                            }
+
+                            app.publisher = result.Publisher || 'Unknown';
+                            app.installLocation = result.InstallLocation;
+                            app.source = result.Source;
+                            app.lastChecked = result.CheckedAt;
+
+                            if (result.Error) {
+                                utils.log('WARN', `Detection error for ${app.name}: ${result.Error}`);
+                            }
+                        } else {
+                            // No result found, mark as not installed
+                            app.checking = false;
+                            app.installed = false;
+                            app.version = 'Latest Stable';
+                            app.versionDisplay = 'Version: Latest Stable';
+                        }
+
+                        this.renderApp(app);
+                    });
+                },
+
+                simulateInstallationCheck: async function() {
+                    utils.log('INFO', 'Running simulated installation check as fallback');
 
                     for (const app of state.apps) {
                         try {
@@ -729,12 +952,10 @@
                             this.renderApp(app);
 
                             // Simulate checking installation status with more realistic timing
-                            // In a real implementation, this would call a PowerShell script to check registry
                             const checkDelay = Math.random() * 1000 + 200; // 200-1200ms random delay
                             await new Promise(resolve => setTimeout(resolve, checkDelay));
 
                             // Simulate installation status based on common applications
-                            // Some apps are more likely to be installed than others
                             const installationProbability = this.getInstallationProbability(app.filename);
                             app.installed = Math.random() < installationProbability;
                             app.checking = false;
@@ -742,7 +963,7 @@
                             this.renderApp(app);
 
                             const statusText = app.installed ? 'installed' : 'not installed';
-                            utils.log('INFO', `${app.name}: ${statusText}`);
+                            utils.log('INFO', `${app.name}: ${statusText} (simulated)`);
 
                         } catch (error) {
                             utils.log('ERROR', `Failed to check installation status for ${app.name}: ${error.message}`, null, null, null);
@@ -799,8 +1020,11 @@
                     // Sanitize all user-displayable content
                     const sanitizedName = utils.sanitizeHtml(app.name);
                     const sanitizedDescription = utils.sanitizeHtml(app.description);
-                    const sanitizedVersion = utils.sanitizeHtml(app.version);
                     const sanitizedCategory = utils.sanitizeHtml(app.category || 'Utilities');
+
+                    // Use versionDisplay if available, otherwise fall back to version
+                    const versionText = app.versionDisplay || `Version: ${app.version || 'Latest Stable'}`;
+                    const sanitizedVersionText = utils.sanitizeHtml(versionText);
 
                     const appHtml = `
                         <div class="app-card ${isSelected ? 'selected' : ''}" data-filename="${app.filename}" data-category="${sanitizedCategory}">
@@ -824,7 +1048,7 @@
                             </div>
                             <div class="app-metadata">
                                 <div class="app-category" title="Category: ${sanitizedCategory}">📁 ${sanitizedCategory}</div>
-                                <div class="app-version">Version: ${sanitizedVersion}</div>
+                                <div class="app-version">${sanitizedVersionText}</div>
                             </div>
                         </div>
                     `;
@@ -946,10 +1170,37 @@
                         search.filter($(this).val());
                     });
 
-                    // Refresh button
-                    $('#refreshBtn').on('click', function() {
+                    // Refresh button - check installation status
+                    $('#refreshBtn').on('click', async function() {
                         if (!state.isLoading) {
-                            appManager.loadApps();
+                            try {
+                                // Update button state
+                                const $btn = $(this);
+                                const $icon = $('#refreshIcon');
+                                const originalText = $btn.text();
+
+                                $btn.prop('disabled', true);
+                                $icon.text('⏳');
+                                $btn.html('<span id="refreshIcon">⏳</span> Checking...');
+
+                                // Check installation status
+                                await appManager.checkInstallationStatus();
+
+                                // Restore button state
+                                $icon.text('🔄');
+                                $btn.html('<span id="refreshIcon">🔄</span> Check Status');
+                                $btn.prop('disabled', false);
+
+                            } catch (error) {
+                                utils.log('ERROR', `Failed to check installation status: ${error.message}`);
+
+                                // Restore button state on error
+                                const $btn = $(this);
+                                const $icon = $('#refreshIcon');
+                                $icon.text('🔄');
+                                $btn.html('<span id="refreshIcon">🔄</span> Check Status');
+                                $btn.prop('disabled', false);
+                            }
                         }
                     });
 

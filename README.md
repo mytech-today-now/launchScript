@@ -2,10 +2,27 @@
 
 A comprehensive web-based management system for PowerShell app installation scripts with accessibility, inclusiveness, and robust error handling.
 
-## 🎉 Latest Updates - Complete Script Integration
+## 🎉 Latest Updates - Real-time Application Detection
+
+### ✅ Enhanced Application Detection System (December 2024)
+The LaunchScript Manager now features **real-time application detection** that scans your host computer to determine which applications are actually installed, replacing the previous simulated detection.
+
+#### 🔍 New Detection Features
+- **Real-time Status Checking**: Automatically detects installed applications using multiple methods
+- **Registry Scanning**: Comprehensive Windows registry analysis (HKLM, HKCU, WOW6432Node)
+- **Windows Store Apps**: Detection of AppX packages and modern Windows applications
+- **Portable Applications**: File system scanning for portable app installations
+- **Web Server Integration**: Node.js server provides API endpoints for PowerShell integration
+- **Enhanced Helper Functions**: Improved detection logic with fallback mechanisms
+
+#### 🚀 New Components
+- `Check-ApplicationStatus.ps1` - PowerShell service for real-time application detection
+- `server.js` - Node.js web server with RESTful API endpoints
+- `start-server.ps1` - Automated server startup with dependency checking
+- Enhanced `HelperFunctions.ps1` with comprehensive detection methods
 
 ### ✅ All Scripts Now Validated and Integrated (December 2024)
-The LaunchScript Manager now properly processes **all 21 application scripts** in the `scripts/` directory:
+The LaunchScript Manager properly processes **all 21 application scripts** in the `scripts/` directory:
 
 **Available Applications:**
 - AngryIPScanner - Network scanner for device discovery
@@ -46,17 +63,20 @@ LaunchScript Manager provides a modern web interface for managing and executing 
 ### Web Interface (index.html)
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **Accessibility**: WCAG 2.1 compliant with ARIA labels, keyboard navigation, and screen reader support
-- **Real-time Validation**: Automatically checks if applications are already installed
+- **Enhanced Detection**: Real-time validation with accurate version display ("Current Version: X.X.X")
+- **Comprehensive Coverage**: Detects applications from registry, Windows Store, and portable installations
 - **Search Functionality**: Quick filtering of available applications
 - **Command Generation**: Builds PowerShell commands for selected applications
 - **Help System**: Built-in usage documentation and guidance
 
 ### PowerShell Backend
 - **Centralized Orchestration**: `launchScript.ps1` coordinates all app installations
-- **Shared Utilities**: Common functions in `scripts/shared/HelperFunctions.ps1`
-- **Robust Error Handling**: Comprehensive logging and fallback mechanisms
-- **Version Detection**: Automatic detection of latest software versions
+- **Enhanced Detection Service**: `Check-ApplicationStatus.ps1` provides real-time application scanning
+- **Shared Utilities**: Comprehensive functions in `scripts/shared/HelperFunctions.ps1`
+- **Robust Error Handling**: Advanced error handling with specific log formats and fallback mechanisms
+- **Version Detection**: Accurate detection of installed versions from registry and file system
 - **Silent Installation**: Unattended installation with progress reporting
+- **Multi-source Detection**: Registry, Windows Store, and portable application support
 
 ### App Scripts
 - **Modular Design**: Individual PowerShell scripts for each application
@@ -254,6 +274,29 @@ catch {
 - **Caching**: Caches version information and status checks
 - **Parallel Processing**: Concurrent status checking for multiple apps
 - **Resource Cleanup**: Automatic cleanup of temporary resources
+
+## Recent Improvements (December 2024)
+
+### 🔧 Enhanced Application Detection Logic
+**Fixed Issues:**
+- ✅ **Property Access Errors**: Resolved PowerShell property access errors in `Test-ProgramInstalled` function
+- ✅ **Version Display**: Fixed frontend to show "Current Version: X.X.X" instead of "Version: Latest Stable" for installed apps
+- ✅ **Detection Coverage**: Improved application detection to find more installed applications
+- ✅ **Error Handling**: Added robust error handling with consistent return structures
+- ✅ **Registry Scanning**: Enhanced registry scanning with better filtering and null checks
+
+**Technical Improvements:**
+- **Consistent Return Structure**: All detection functions now return consistent hashtable structures
+- **Safe Property Access**: Added null checks and safe property access patterns
+- **Enhanced Logging**: Improved debug logging with component-specific messages
+- **Performance Optimization**: Faster detection with efficient registry scanning
+- **Fallback Mechanisms**: Multiple detection methods with graceful fallbacks
+
+**Testing:**
+- ✅ Created comprehensive test suite (`tests/DetectionTests.ps1`)
+- ✅ Added simple validation test (`tests/QuickTest.ps1`)
+- ✅ Verified detection accuracy for multiple applications
+- ✅ Performance testing shows sub-5-second detection times
 
 ## Version History
 

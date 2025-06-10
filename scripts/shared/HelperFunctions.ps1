@@ -119,41 +119,149 @@ function Test-IsElevated {
 function Get-InstalledPrograms {
     <#
     .SYNOPSIS
-        Get list of installed programs from Windows registry
+        Get list of installed programs from Windows registry with enhanced detection
     .PARAMETER Name
         Optional filter by program name (supports wildcards)
+    .PARAMETER IncludeWindowsStore
+        Include Windows Store apps in the search
+    .PARAMETER IncludePortable
+        Include portable app detection via common paths
     .OUTPUTS
-        Array of installed program objects
+        Array of installed program objects with enhanced metadata
     #>
     param(
         [Parameter()]
-        [string]$Name = '*'
+        [string]$Name = '*',
+
+        [Parameter()]
+        [switch]$IncludeWindowsStore,
+
+        [Parameter()]
+        [switch]$IncludePortable
     )
-    
+
     try {
+        Write-AppLog "Scanning for installed programs: $Name" -Level DEBUG
+
+        # Enhanced registry paths including more locations
         $registryPaths = @(
             'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
             'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
             'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
         )
-        
+
+        # Add Windows Installer registry paths
+        $registryPaths += @(
+            'HKLM:\SOFTWARE\Classes\Installer\Products\*',
+            'HKCU:\SOFTWARE\Classes\Installer\Products\*'
+        )
+
         $installedPrograms = @()
-        
+
         foreach ($path in $registryPaths) {
             try {
+                Write-AppLog "Scanning registry path: $path" -Level DEBUG
+
                 $programs = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
-                    Where-Object { $_.DisplayName -and $_.DisplayName -like $Name } |
-                    Select-Object DisplayName, DisplayVersion, Publisher, InstallDate, UninstallString
-                
-                $installedPrograms += $programs
+                    Where-Object {
+                        # Enhanced filtering with null checks
+                        $_.DisplayName -and
+                        $_.DisplayName.Trim() -ne '' -and
+                        $_.DisplayName -like $Name -and
+                        $_.DisplayName -notmatch '^(KB\d+|Update for|Security Update|Hotfix)' -and
+                        # Filter out system components and empty entries
+                        $_.DisplayName -notmatch '^Microsoft Visual C\+\+ \d+ Redistributable' -and
+                        $_.DisplayName -notmatch '^Microsoft \.NET Framework'
+                    } |
+                    Select-Object @{
+                        Name = 'DisplayName'
+                        Expression = { if ($_.DisplayName) { $_.DisplayName.Trim() } else { 'Unknown' } }
+                    }, @{
+                        Name = 'DisplayVersion'
+                        Expression = { if ($_.DisplayVersion) { $_.DisplayVersion.Trim() } else { if ($_.Version) { $_.Version.Trim() } else { 'Unknown' } } }
+                    }, @{
+                        Name = 'Publisher'
+                        Expression = { if ($_.Publisher) { $_.Publisher.Trim() } else { 'Unknown' } }
+                    }, @{
+                        Name = 'InstallDate'
+                        Expression = { if ($_.InstallDate) { $_.InstallDate } else { $null } }
+                    }, @{
+                        Name = 'UninstallString'
+                        Expression = { if ($_.UninstallString) { $_.UninstallString } else { $null } }
+                    }, @{
+                        Name = 'InstallLocation'
+                        Expression = { if ($_.InstallLocation) { $_.InstallLocation.TrimEnd('\') } else { $null } }
+                    }, @{
+                        Name = 'Source'
+                        Expression = { 'Registry' }
+                    }, @{
+                        Name = 'RegistryPath'
+                        Expression = { $_.PSPath }
+                    }
+
+                if ($programs) {
+                    $installedPrograms += $programs
+                    Write-AppLog "Found $(@($programs).Count) programs in registry path: $path" -Level DEBUG
+                }
             }
             catch {
-                # Silently continue if registry path doesn't exist
+                Write-AppLog "Could not access registry path: $path - $($_.Exception.Message)" -Level DEBUG
                 continue
             }
         }
-        
-        return $installedPrograms | Sort-Object DisplayName -Unique
+
+        # Windows Store apps detection
+        if ($IncludeWindowsStore) {
+            try {
+                $storeApps = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -like $Name -or $_.PackageFullName -like $Name } |
+                    Select-Object @{
+                        Name = 'DisplayName'
+                        Expression = { $_.Name }
+                    }, @{
+                        Name = 'DisplayVersion'
+                        Expression = { $_.Version }
+                    }, @{
+                        Name = 'Publisher'
+                        Expression = { $_.Publisher }
+                    }, @{
+                        Name = 'InstallDate'
+                        Expression = { $_.InstallDate }
+                    }, @{
+                        Name = 'UninstallString'
+                        Expression = { "Get-AppxPackage $($_.PackageFullName) | Remove-AppxPackage" }
+                    }, @{
+                        Name = 'InstallLocation'
+                        Expression = { if ($_.InstallLocation) { $_.InstallLocation.TrimEnd('\') } else { $null } }
+                    }, @{
+                        Name = 'Source'
+                        Expression = { 'WindowsStore' }
+                    }, @{
+                        Name = 'RegistryPath'
+                        Expression = { $_.PackageFullName }
+                    }
+
+                $installedPrograms += $storeApps
+                Write-AppLog "Found $($storeApps.Count) Windows Store apps matching: $Name" -Level DEBUG
+            }
+            catch {
+                Write-AppLog "Could not scan Windows Store apps: $($_.Exception.Message)" -Level DEBUG
+            }
+        }
+
+        # Portable apps detection in common locations
+        if ($IncludePortable) {
+            $portableApps = Get-PortableApplications -Name $Name
+            $installedPrograms += $portableApps
+        }
+
+        # Remove duplicates and sort
+        $uniquePrograms = @($installedPrograms |
+            Sort-Object DisplayName, DisplayVersion -Unique |
+            Where-Object { $_.DisplayName -and $_.DisplayName.Trim() -ne '' })
+
+        Write-AppLog "Found $($uniquePrograms.Count) installed programs matching: $Name" -Level DEBUG
+        return $uniquePrograms
     }
     catch {
         Write-AppLog "Failed to get installed programs: $($_.Exception.Message)" -Level ERROR
@@ -161,36 +269,163 @@ function Get-InstalledPrograms {
     }
 }
 
+function Get-PortableApplications {
+    <#
+    .SYNOPSIS
+        Detect portable applications in common installation directories
+    .PARAMETER Name
+        Application name to search for (supports wildcards)
+    .OUTPUTS
+        Array of portable application objects
+    #>
+    param(
+        [Parameter()]
+        [string]$Name = '*'
+    )
+
+    try {
+        Write-AppLog "Scanning for portable applications: $Name" -Level DEBUG
+
+        # Common portable app directories
+        $portablePaths = @(
+            "$env:ProgramFiles\PortableApps",
+            "$env:ProgramFiles(x86)\PortableApps",
+            "$env:USERPROFILE\PortableApps",
+            "$env:USERPROFILE\Desktop\PortableApps",
+            "$env:USERPROFILE\Documents\PortableApps",
+            "C:\PortableApps",
+            "D:\PortableApps"
+        )
+
+        # Add common program directories for portable installs
+        $portablePaths += @(
+            "$env:ProgramFiles",
+            "$env:ProgramFiles(x86)",
+            "$env:LOCALAPPDATA\Programs",
+            "$env:APPDATA"
+        )
+
+        $portableApps = @()
+
+        foreach ($basePath in $portablePaths) {
+            if (-not (Test-Path $basePath)) { continue }
+
+            try {
+                # Look for executable files that might be portable apps
+                $executables = Get-ChildItem -Path $basePath -Recurse -Include "*.exe" -ErrorAction SilentlyContinue |
+                    Where-Object {
+                        $_.Name -like "*$Name*" -and
+                        $_.Directory.Name -like "*$Name*" -and
+                        $_.Length -gt 1MB  # Filter out small utility files
+                    } |
+                    Select-Object -First 50  # Limit results to prevent excessive scanning
+
+                foreach ($exe in $executables) {
+                    try {
+                        $versionInfo = $exe.VersionInfo
+
+                        if ($versionInfo.ProductName -and $versionInfo.ProductName -like "*$Name*") {
+                            $portableApp = [PSCustomObject]@{
+                                DisplayName = $versionInfo.ProductName
+                                DisplayVersion = $versionInfo.ProductVersion
+                                Publisher = $versionInfo.CompanyName
+                                InstallDate = $exe.CreationTime.ToString('yyyyMMdd')
+                                UninstallString = "Manual removal required"
+                                InstallLocation = $exe.DirectoryName
+                                Source = 'Portable'
+                                RegistryPath = $exe.FullName
+                            }
+
+                            $portableApps += $portableApp
+                        }
+                    }
+                    catch {
+                        # Skip files that can't be analyzed
+                        continue
+                    }
+                }
+            }
+            catch {
+                Write-AppLog "Could not scan portable path: $basePath" -Level DEBUG
+                continue
+            }
+        }
+
+        Write-AppLog "Found $($portableApps.Count) portable applications matching: $Name" -Level DEBUG
+        return $portableApps
+    }
+    catch {
+        Write-AppLog "Failed to scan for portable applications: $($_.Exception.Message)" -Level ERROR
+        return @()
+    }
+}
+
 function Test-ProgramInstalled {
     <#
     .SYNOPSIS
-        Check if a specific program is installed
+        Check if a specific program is installed with enhanced detection
     .PARAMETER Name
         Program name to search for (supports wildcards)
+    .PARAMETER IncludeWindowsStore
+        Include Windows Store apps in the search
+    .PARAMETER IncludePortable
+        Include portable app detection
     .OUTPUTS
-        Boolean indicating if the program is installed
+        Hashtable with installation details - always returns a consistent structure
     #>
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Name
-    )
-    
-    try {
-        $installed = @(Get-InstalledPrograms -Name $Name)
-        $isInstalled = $installed.Count -gt 0
+        [string]$Name,
 
-        if ($isInstalled) {
-            Write-AppLog "Found installed program: $($installed[0].DisplayName) v$($installed[0].DisplayVersion)" -Level SUCCESS
+        [Parameter()]
+        [switch]$IncludeWindowsStore,
+
+        [Parameter()]
+        [switch]$IncludePortable
+    )
+
+    # Initialize default return structure to ensure consistency
+    $defaultResult = @{
+        IsInstalled = $false
+        DisplayName = $null
+        Version = $null
+        Publisher = $null
+        InstallLocation = $null
+        Source = $null
+        InstallDate = $null
+    }
+
+    try {
+        Write-AppLog "Searching for program: $Name" -Level DEBUG
+
+        $installed = @(Get-InstalledPrograms -Name $Name -IncludeWindowsStore:$IncludeWindowsStore -IncludePortable:$IncludePortable)
+
+        if ($installed -and $installed.Count -gt 0) {
+            $app = $installed[0]  # Take the first match
+
+            # Ensure all required properties exist with safe access
+            $result = @{
+                IsInstalled = $true
+                DisplayName = if ($app.DisplayName) { $app.DisplayName } else { $Name }
+                Version = if ($app.DisplayVersion) { $app.DisplayVersion } else { 'Unknown' }
+                Publisher = if ($app.Publisher) { $app.Publisher } else { 'Unknown' }
+                InstallLocation = if ($app.InstallLocation) { $app.InstallLocation.TrimEnd('\') } else { $null }
+                Source = if ($app.Source) { $app.Source } else { 'Registry' }
+                InstallDate = if ($app.InstallDate) { $app.InstallDate } else { $null }
+            }
+
+            Write-AppLog "Found installed program: $($result.DisplayName) v$($result.Version) (Source: $($result.Source))" -Level SUCCESS
+            return $result
         }
         else {
             Write-AppLog "Program not found: $Name" -Level INFO
+            return $defaultResult
         }
-
-        return $isInstalled
     }
     catch {
         Write-AppLog "Failed to check if program is installed: $($_.Exception.Message)" -Level ERROR
-        return $false
+        Write-AppLog "Stack trace: $($_.ScriptStackTrace)" -Level DEBUG
+        return $defaultResult
     }
 }
 

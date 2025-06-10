@@ -1,0 +1,34 @@
+{
+  "name": "launchscript-manager",
+  "version": "1.0.0",
+  "description": "Web interface for managing PowerShell app installations with real-time application detection",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "powershell",
+    "automation",
+    "application-installer",
+    "windows",
+    "package-manager"
+  ],
+  "author": "LaunchScript Manager",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "bugs": {
+    "url": "."
+  },
+  "homepage": "."
+}
