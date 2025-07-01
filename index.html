@@ -66,6 +66,86 @@
             padding: 2rem;
         }
 
+        .main-content-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--surface-color);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .main-content-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .main-content-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .app-category-section {
+            margin-bottom: 2rem;
+        }
+
+        .app-category-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: rgba(37, 99, 235, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .app-category-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .app-category-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .app-category-count {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        /* Indeterminate checkbox styling */
+        .main-content-checkbox:indeterminate,
+        .app-category-checkbox:indeterminate {
+            background-color: var(--primary-color);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3e%3cpath fill-rule='evenodd' d='M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z' clip-rule='evenodd'/%3e%3c/svg%3e");
+        }
+
+        /* Focus styles for category elements */
+        .main-content-checkbox:focus,
+        .app-category-checkbox:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+        }
+
+        .main-content-label:focus,
+        .app-category-title:focus {
+            outline: none;
+            box-shadow: var(--focus-ring);
+            border-radius: 4px;
+        }
+
         .controls {
             display: flex;
             gap: 1rem;
@@ -147,11 +227,15 @@
             color: var(--text-secondary);
         }
 
+        .apps-categories {
+            margin-bottom: 2rem;
+        }
+
         .apps-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .app-card {
@@ -189,6 +273,16 @@
         .app-checkbox:focus {
             outline: none;
             box-shadow: var(--focus-ring);
+        }
+
+        .app-checkbox:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .app-card.installed .app-checkbox {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .app-name {
@@ -237,10 +331,11 @@
 
         .app-metadata {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             gap: 1rem;
             margin-top: 0.5rem;
+            flex-wrap: wrap;
         }
 
         .app-category {
@@ -253,9 +348,51 @@
         }
 
         .app-version {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-style: italic;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            background: rgba(37, 99, 235, 0.08);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            white-space: nowrap;
+            margin: 0.75rem 0;
+            display: inline-block;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .app-version.installed {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: rgba(5, 150, 105, 0.3);
+            color: var(--success-color);
+        }
+
+        .app-version.not-installed {
+            background: rgba(220, 38, 38, 0.08);
+            border-color: rgba(220, 38, 38, 0.2);
+            color: var(--error-color);
+        }
+
+        .app-version.checking {
+            background: rgba(217, 119, 6, 0.1);
+            border-color: rgba(217, 119, 6, 0.3);
+            color: var(--warning-color);
+            animation: pulse 2s infinite;
+        }
+
+        .version-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .version-number {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-left: 0.3rem;
         }
 
         .command-output {
@@ -354,6 +491,98 @@
             border: 0;
         }
 
+        /* System Status Alert Styles */
+        .system-status {
+            margin-bottom: 2rem;
+        }
+
+        .system-alert {
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 2px solid;
+            background: var(--surface-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .system-alert-warning {
+            border-color: var(--warning-color);
+            background: rgba(217, 119, 6, 0.05);
+        }
+
+        .system-alert-success {
+            border-color: var(--success-color);
+            background: rgba(5, 150, 105, 0.05);
+        }
+
+        .system-alert-error {
+            border-color: var(--error-color);
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .system-alert-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .system-alert-icon {
+            font-size: 1.5rem;
+        }
+
+        .system-alert-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .system-alert-close {
+            position: absolute;
+            right: 0;
+            top: -0.25rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+
+        .system-alert-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .system-alert-content p {
+            margin: 0 0 0.75rem 0;
+            line-height: 1.5;
+        }
+
+        .system-alert-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .system-alert-actions {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .system-alert-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .system-alert-details p {
+            margin: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -400,8 +629,20 @@
                 </button>
             </div>
 
-            <div id="appsContainer" class="apps-grid" role="region" aria-label="Available applications">
-                <!-- Apps will be dynamically loaded here -->
+            <div class="main-content-header">
+                <input
+                    type="checkbox"
+                    class="main-content-checkbox"
+                    id="selectAllApps"
+                    aria-describedby="selectAllLabel"
+                >
+                <label for="selectAllApps" class="main-content-label" id="selectAllLabel">
+                    Select All Applications
+                </label>
+            </div>
+
+            <div id="appsContainer" class="apps-categories" role="region" aria-label="Available applications grouped by category">
+                <!-- Apps will be dynamically loaded here grouped by category -->
             </div>
 
             <div id="commandOutput" class="command-output" style="display: none;" role="region" aria-label="Generated PowerShell command">
@@ -458,7 +699,9 @@
                 apps: [],
                 selectedApps: new Set(),
                 isLoading: false,
-                lastError: null
+                lastError: null,
+                systemInfo: null,
+                powerShellAvailable: false
             };
 
             // Configuration
@@ -515,6 +758,142 @@
 
             // App management functions
             const appManager = {
+                checkSystemCompatibility: async function() {
+                    try {
+                        utils.log('INFO', 'Checking system compatibility and PowerShell availability');
+
+                        const response = await fetch('/api/system');
+                        if (!response.ok) {
+                            throw new Error(`System check failed: ${response.statusText}`);
+                        }
+
+                        const result = await response.json();
+                        if (!result.success) {
+                            throw new Error(`System check error: ${result.error}`);
+                        }
+
+                        state.systemInfo = result.data.systemInfo;
+                        state.powerShellAvailable = result.data.powerShell.available;
+
+                        utils.log('INFO', `System: ${state.systemInfo.platformName} ${state.systemInfo.architecture}`);
+                        utils.log('INFO', `PowerShell available: ${state.powerShellAvailable}`);
+
+                        // Show system compatibility message
+                        this.showSystemCompatibilityMessage(result.data);
+
+                        return result.data;
+
+                    } catch (error) {
+                        utils.log('ERROR', `System compatibility check failed: ${error.message}`);
+                        this.showSystemError(error.message);
+                        return null;
+                    }
+                },
+
+                showSystemCompatibilityMessage: function(systemData) {
+                    const { systemInfo, powerShell, recommendations } = systemData;
+
+                    // Create or update system status message
+                    let statusContainer = $('#systemStatus');
+                    if (statusContainer.length === 0) {
+                        statusContainer = $('<div id="systemStatus" class="system-status"></div>');
+                        $('.main-content').prepend(statusContainer);
+                    }
+
+                    if (!powerShell.available) {
+                        // PowerShell not available - show download link
+                        const statusHtml = `
+                            <div class="system-alert system-alert-warning">
+                                <div class="system-alert-header">
+                                    <span class="system-alert-icon">⚠️</span>
+                                    <h3>PowerShell Required</h3>
+                                </div>
+                                <div class="system-alert-content">
+                                    <p><strong>PowerShell is not installed or not accessible on your ${systemInfo.platformName} system.</strong></p>
+                                    <p>This application requires PowerShell to detect and manage software installations.</p>
+                                    <div class="system-alert-actions">
+                                        <a href="${recommendations.downloadUrl}" target="_blank" class="btn btn-primary">
+                                            📥 Download PowerShell for ${systemInfo.platformName}
+                                        </a>
+                                        <button class="btn btn-secondary" id="recheckSystemBtn">
+                                            🔄 Recheck System
+                                        </button>
+                                    </div>
+                                    <div class="system-alert-details">
+                                        <p><small><strong>Installation Instructions:</strong> ${recommendations.installInstructions}</small></p>
+                                        <p><small><strong>System Details:</strong> ${systemInfo.platformName} ${systemInfo.architecture} (${systemInfo.release})</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        statusContainer.html(statusHtml);
+
+                        // Disable main functionality
+                        $('#refreshBtn, #generateBtn').prop('disabled', true);
+
+                    } else {
+                        // PowerShell available - show success message
+                        const statusHtml = `
+                            <div class="system-alert system-alert-success">
+                                <div class="system-alert-header">
+                                    <span class="system-alert-icon">✅</span>
+                                    <h3>System Ready</h3>
+                                    <button class="system-alert-close" id="closeSystemAlert">&times;</button>
+                                </div>
+                                <div class="system-alert-content">
+                                    <p><strong>PowerShell is available and ready.</strong></p>
+                                    <p><small>System: ${systemInfo.platformName} ${systemInfo.architecture} | PowerShell: ${powerShell.command}</small></p>
+                                </div>
+                            </div>
+                        `;
+                        statusContainer.html(statusHtml);
+
+                        // Auto-hide success message after 5 seconds
+                        setTimeout(() => {
+                            statusContainer.fadeOut();
+                        }, 5000);
+                    }
+                },
+
+                showSystemError: function(errorMessage) {
+                    let statusContainer = $('#systemStatus');
+                    if (statusContainer.length === 0) {
+                        statusContainer = $('<div id="systemStatus" class="system-status"></div>');
+                        $('.main-content').prepend(statusContainer);
+                    }
+
+                    const statusHtml = `
+                        <div class="system-alert system-alert-error">
+                            <div class="system-alert-header">
+                                <span class="system-alert-icon">❌</span>
+                                <h3>System Check Failed</h3>
+                            </div>
+                            <div class="system-alert-content">
+                                <p><strong>Unable to check system compatibility.</strong></p>
+                                <p>Error: ${utils.sanitizeHtml(errorMessage)}</p>
+                                <div class="system-alert-actions">
+                                    <button class="btn btn-secondary" id="recheckSystemBtn">
+                                        🔄 Retry System Check
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    statusContainer.html(statusHtml);
+                },
+
+                showLimitedFunctionality: function() {
+                    const container = $('#appsContainer');
+                    container.html(`
+                        <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                            <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Limited Functionality</h2>
+                            <p style="font-size: 1.1rem; margin-bottom: 1rem;">PowerShell is required for application detection and management.</p>
+                            <p>Please install PowerShell using the download link above to access full functionality.</p>
+                        </div>
+                    `);
+                },
+
                 loadApps: async function() {
                     try {
                         state.isLoading = true;
@@ -727,7 +1106,8 @@
                             description: metadata.description,
                             category: metadata.category,
                             version: 'Latest Stable',
-                            versionDisplay: 'Version: Latest Stable',
+                            versionDisplay: `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`,
+                            versionStatus: 'checking',
                             installed: false,
                             checking: true
                         };
@@ -742,7 +1122,8 @@
                             description: 'Application installer script',
                             category: 'Utilities',
                             version: 'Latest Stable',
-                            versionDisplay: 'Version: Latest Stable',
+                            versionDisplay: `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`,
+                            versionStatus: 'checking',
                             installed: false,
                             checking: true
                         };
@@ -751,6 +1132,12 @@
 
                 checkInstallationStatus: async function() {
                     utils.log('INFO', 'Checking installation status for applications');
+
+                    // Check if PowerShell is available before proceeding
+                    if (!state.powerShellAvailable) {
+                        utils.log('WARN', 'PowerShell not available, skipping installation status check');
+                        return;
+                    }
 
                     try {
                         // Check if we have too many apps - use progressive checking for better performance
@@ -818,6 +1205,16 @@
                                 batch.forEach(app => {
                                     app.checking = false;
                                     app.installed = Math.random() < this.getInstallationProbability(app.filename);
+
+                                    // Update version display for fallback
+                                    if (app.installed) {
+                                        app.versionDisplay = `<span class="version-label">Installed:</span><span class="version-number">Version Unknown</span>`;
+                                        app.versionStatus = 'installed';
+                                    } else {
+                                        app.versionDisplay = `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`;
+                                        app.versionStatus = 'not-installed';
+                                    }
+
                                     this.renderApp(app);
                                 });
                             }
@@ -837,6 +1234,16 @@
                             batch.forEach(app => {
                                 app.checking = false;
                                 app.installed = Math.random() < this.getInstallationProbability(app.filename);
+
+                                // Update version display for error fallback
+                                if (app.installed) {
+                                    app.versionDisplay = `<span class="version-label">Installed:</span><span class="version-number">Version Unknown</span>`;
+                                    app.versionStatus = 'installed';
+                                } else {
+                                    app.versionDisplay = `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`;
+                                    app.versionStatus = 'not-installed';
+                                }
+
                                 this.renderApp(app);
                             });
                         }
@@ -908,19 +1315,22 @@
                             app.checking = false;
                             app.installed = result.IsInstalled;
 
-                            // Update version display logic
+                            // Update version display logic with enhanced formatting
                             if (result.IsInstalled && result.Version) {
-                                // Show actual installed version
+                                // Show actual installed version with formatting
                                 app.version = result.Version;
-                                app.versionDisplay = `Current Version: ${result.Version}`;
+                                app.versionDisplay = `<span class="version-label">Installed:</span><span class="version-number">${result.Version}</span>`;
+                                app.versionStatus = 'installed';
                             } else if (result.IsInstalled && !result.Version) {
                                 // Installed but version unknown
                                 app.version = 'Unknown';
-                                app.versionDisplay = 'Current Version: Unknown';
+                                app.versionDisplay = `<span class="version-label">Installed:</span><span class="version-number">Version Unknown</span>`;
+                                app.versionStatus = 'installed';
                             } else {
                                 // Not installed - show latest available
                                 app.version = 'Latest Stable';
-                                app.versionDisplay = 'Version: Latest Stable';
+                                app.versionDisplay = `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`;
+                                app.versionStatus = 'not-installed';
                             }
 
                             app.publisher = result.Publisher || 'Unknown';
@@ -936,7 +1346,8 @@
                             app.checking = false;
                             app.installed = false;
                             app.version = 'Latest Stable';
-                            app.versionDisplay = 'Version: Latest Stable';
+                            app.versionDisplay = `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`;
+                            app.versionStatus = 'not-installed';
                         }
 
                         this.renderApp(app);
@@ -959,6 +1370,15 @@
                             const installationProbability = this.getInstallationProbability(app.filename);
                             app.installed = Math.random() < installationProbability;
                             app.checking = false;
+
+                            // Update version display based on simulated installation status
+                            if (app.installed) {
+                                app.versionDisplay = `<span class="version-label">Installed:</span><span class="version-number">Version Unknown</span>`;
+                                app.versionStatus = 'installed';
+                            } else {
+                                app.versionDisplay = `<span class="version-label">Available:</span><span class="version-number">Latest Stable</span>`;
+                                app.versionStatus = 'not-installed';
+                            }
 
                             this.renderApp(app);
 
@@ -998,24 +1418,91 @@
                 renderApps: function() {
                     const container = $('#appsContainer');
                     container.empty();
-                    
+
                     if (state.apps.length === 0) {
                         container.html(`
-                            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
                                 <p style="font-size: 1.2rem; margin-bottom: 1rem;">No applications found</p>
                                 <p>Place PowerShell scripts (.ps1) in the scripts/ directory to get started.</p>
                             </div>
                         `);
                         return;
                     }
-                    
-                    state.apps.forEach(app => this.renderApp(app));
+
+                    // Group apps by category
+                    const appsByCategory = this.groupAppsByCategory(state.apps);
+
+                    // Render each category section
+                    Object.keys(appsByCategory).sort().forEach(category => {
+                        this.renderCategorySection(category, appsByCategory[category]);
+                    });
+                },
+
+                groupAppsByCategory: function(apps) {
+                    const grouped = {};
+
+                    apps.forEach(app => {
+                        const category = app.category || 'Utilities';
+                        if (!grouped[category]) {
+                            grouped[category] = [];
+                        }
+                        grouped[category].push(app);
+                    });
+
+                    // Sort apps within each category alphabetically
+                    Object.keys(grouped).forEach(category => {
+                        grouped[category].sort((a, b) => a.name.localeCompare(b.name));
+                    });
+
+                    return grouped;
+                },
+
+                renderCategorySection: function(category, apps) {
+                    const sanitizedCategory = utils.sanitizeHtml(category);
+                    const categoryId = category.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    const installedCount = apps.filter(app => app.installed).length;
+
+                    const categoryHtml = `
+                        <div class="app-category-section" data-category="${sanitizedCategory}">
+                            <div class="app-category-header">
+                                <input
+                                    type="checkbox"
+                                    class="app-category-checkbox"
+                                    id="category-${categoryId}"
+                                    data-category="${sanitizedCategory}"
+                                    aria-describedby="categoryLabel-${categoryId}"
+                                >
+                                <label for="category-${categoryId}" class="app-category-title" id="categoryLabel-${categoryId}">
+                                    ${sanitizedCategory}
+                                </label>
+                                <div class="app-category-count">
+                                    ${apps.length} app${apps.length !== 1 ? 's' : ''} (${installedCount} installed)
+                                </div>
+                            </div>
+                            <div class="apps-grid" id="grid-${categoryId}">
+                                <!-- Apps for this category will be rendered here -->
+                            </div>
+                        </div>
+                    `;
+
+                    $('#appsContainer').append(categoryHtml);
+
+                    // Render apps in this category
+                    apps.forEach(app => this.renderAppInCategory(app, categoryId));
                 },
 
                 renderApp: function(app) {
+                    // Find the category for this app and render it there
+                    const category = app.category || 'Utilities';
+                    const categoryId = category.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    this.renderAppInCategory(app, categoryId);
+                },
+
+                renderAppInCategory: function(app, categoryId) {
                     const isSelected = state.selectedApps.has(app.filename);
                     const statusIcon = this.getStatusIcon(app);
                     const statusClass = app.checking ? 'status-checking' : (app.installed ? 'status-installed' : 'status-not-installed');
+                    const isInstalled = app.installed;
 
                     // Sanitize all user-displayable content
                     const sanitizedName = utils.sanitizeHtml(app.name);
@@ -1023,17 +1510,35 @@
                     const sanitizedCategory = utils.sanitizeHtml(app.category || 'Utilities');
 
                     // Use versionDisplay if available, otherwise fall back to version
-                    const versionText = app.versionDisplay || `Version: ${app.version || 'Latest Stable'}`;
-                    const sanitizedVersionText = utils.sanitizeHtml(versionText);
+                    let versionText;
+                    let versionStatusClass = 'not-installed';
+
+                    if (app.checking) {
+                        versionText = `🔄 <span class="version-label">Checking:</span><span class="version-number">Please wait...</span>`;
+                        versionStatusClass = 'checking';
+                    } else {
+                        const versionIcon = app.installed ? '✅' : '📦';
+                        const baseVersionText = app.versionDisplay || `<span class="version-label">Available:</span><span class="version-number">${app.version || 'Latest Stable'}</span>`;
+                        versionText = `${versionIcon} ${baseVersionText}`;
+
+                        if (app.versionStatus) {
+                            versionStatusClass = app.versionStatus;
+                        } else if (app.installed) {
+                            versionStatusClass = 'installed';
+                        }
+                    }
 
                     const appHtml = `
-                        <div class="app-card ${isSelected ? 'selected' : ''}" data-filename="${app.filename}" data-category="${sanitizedCategory}">
+                        <div class="app-card ${isSelected ? 'selected' : ''} ${isInstalled ? 'installed' : ''}"
+                             data-filename="${app.filename}"
+                             data-category="${sanitizedCategory}">
                             <div class="app-header">
                                 <input
                                     type="checkbox"
                                     class="app-checkbox"
                                     id="app-${app.filename}"
                                     ${isSelected ? 'checked' : ''}
+                                    ${isInstalled ? 'disabled' : ''}
                                     aria-describedby="desc-${app.filename}"
                                 >
                                 <label for="app-${app.filename}" class="app-name">${sanitizedName}</label>
@@ -1043,20 +1548,27 @@
                                     ${statusIcon}
                                 </div>
                             </div>
+                            <div class="app-version ${versionStatusClass}" title="${app.checking ? 'Checking version information...' : (app.installed ? `Currently installed: ${app.version || 'Unknown version'}${app.publisher ? ' by ' + app.publisher : ''}${app.installLocation ? ' at ' + app.installLocation : ''}` : `Available for installation: ${app.version || 'Latest Stable'}`)}">
+                                ${versionText}
+                            </div>
                             <div class="app-description" id="desc-${app.filename}">
                                 ${sanitizedDescription}
                             </div>
                             <div class="app-metadata">
                                 <div class="app-category" title="Category: ${sanitizedCategory}">📁 ${sanitizedCategory}</div>
-                                <div class="app-version">${sanitizedVersionText}</div>
                             </div>
                         </div>
                     `;
 
+                    const targetGrid = $(`#grid-${categoryId}`);
                     const existingCard = $(`.app-card[data-filename="${app.filename}"]`);
+
                     if (existingCard.length) {
                         existingCard.replaceWith(appHtml);
+                    } else if (targetGrid.length) {
+                        targetGrid.append(appHtml);
                     } else {
+                        // Fallback: append to main container if category grid not found
                         $('#appsContainer').append(appHtml);
                     }
                 },
@@ -1126,19 +1638,39 @@
                     const normalizedQuery = query.toLowerCase().trim();
                     let visibleCount = 0;
 
-                    $('.app-card').each(function() {
-                        const card = $(this);
-                        const appName = card.find('.app-name').text().toLowerCase();
-                        const appDesc = card.find('.app-description').text().toLowerCase();
-                        const appCategory = card.find('.app-category').text().toLowerCase();
+                    // If query is empty, show all categories and apps
+                    if (!normalizedQuery) {
+                        $('.app-category-section').show();
+                        $('.app-card').show();
+                        visibleCount = $('.app-card').length;
+                    } else {
+                        // Filter apps and hide/show categories based on matches
+                        $('.app-category-section').each(function() {
+                            const categorySection = $(this);
+                            const categoryGrid = categorySection.find('.apps-grid');
+                            let categoryHasMatches = false;
 
-                        const matches = appName.includes(normalizedQuery) ||
-                                      appDesc.includes(normalizedQuery) ||
-                                      appCategory.includes(normalizedQuery);
+                            categoryGrid.find('.app-card').each(function() {
+                                const card = $(this);
+                                const appName = card.find('.app-name').text().toLowerCase();
+                                const appDesc = card.find('.app-description').text().toLowerCase();
+                                const appCategory = card.find('.app-category').text().toLowerCase();
 
-                        card.toggle(matches);
-                        if (matches) visibleCount++;
-                    });
+                                const matches = appName.includes(normalizedQuery) ||
+                                              appDesc.includes(normalizedQuery) ||
+                                              appCategory.includes(normalizedQuery);
+
+                                card.toggle(matches);
+                                if (matches) {
+                                    visibleCount++;
+                                    categoryHasMatches = true;
+                                }
+                            });
+
+                            // Show/hide the entire category section based on whether it has matches
+                            categorySection.toggle(categoryHasMatches);
+                        });
+                    }
 
                     utils.log('INFO', `Filtered applications with query: "${query}" (${visibleCount} matches)`);
                 }, 300)
@@ -1147,12 +1679,81 @@
             // Event handlers
             const eventHandlers = {
                 init: function() {
+                    // Main content select all
+                    $(document).on('change', '#selectAllApps', function() {
+                        const isChecked = $(this).is(':checked');
+
+                        if (isChecked) {
+                            // Select all non-installed apps
+                            $('.app-checkbox:not(:disabled)').each(function() {
+                                const checkbox = $(this);
+                                const filename = checkbox.closest('.app-card').data('filename');
+                                const card = checkbox.closest('.app-card');
+
+                                checkbox.prop('checked', true);
+                                state.selectedApps.add(filename);
+                                card.addClass('selected');
+                            });
+
+                            // Check all category checkboxes
+                            $('.app-category-checkbox').prop('checked', true);
+                        } else {
+                            // Deselect all apps
+                            $('.app-checkbox').each(function() {
+                                const checkbox = $(this);
+                                const filename = checkbox.closest('.app-card').data('filename');
+                                const card = checkbox.closest('.app-card');
+
+                                checkbox.prop('checked', false);
+                                state.selectedApps.delete(filename);
+                                card.removeClass('selected');
+                            });
+
+                            // Uncheck all category checkboxes
+                            $('.app-category-checkbox').prop('checked', false);
+                        }
+
+                        $('#generateBtn').prop('disabled', state.selectedApps.size === 0);
+                        utils.log('INFO', `${isChecked ? 'Selected' : 'Deselected'} all applications`);
+                    });
+
+                    // Category selection
+                    $(document).on('change', '.app-category-checkbox', function() {
+                        const checkbox = $(this);
+                        const category = checkbox.data('category');
+                        const isChecked = checkbox.is(':checked');
+
+                        // Find all apps in this category
+                        $(`.app-card[data-category="${category}"] .app-checkbox:not(:disabled)`).each(function() {
+                            const appCheckbox = $(this);
+                            const filename = appCheckbox.closest('.app-card').data('filename');
+                            const card = appCheckbox.closest('.app-card');
+
+                            appCheckbox.prop('checked', isChecked);
+
+                            if (isChecked) {
+                                state.selectedApps.add(filename);
+                                card.addClass('selected');
+                            } else {
+                                state.selectedApps.delete(filename);
+                                card.removeClass('selected');
+                            }
+                        });
+
+                        // Update main select all checkbox state
+                        eventHandlers.updateMainSelectAllState();
+
+                        $('#generateBtn').prop('disabled', state.selectedApps.size === 0);
+                        utils.log('INFO', `${isChecked ? 'Selected' : 'Deselected'} all apps in category: ${category}`);
+                    });
+
                     // App selection
                     $(document).on('change', '.app-checkbox', function() {
                         const checkbox = $(this);
                         const filename = checkbox.closest('.app-card').data('filename');
                         const card = checkbox.closest('.app-card');
-                        
+                        const category = card.data('category');
+
                         if (checkbox.is(':checked')) {
                             state.selectedApps.add(filename);
                             card.addClass('selected');
@@ -1160,7 +1761,13 @@
                             state.selectedApps.delete(filename);
                             card.removeClass('selected');
                         }
-                        
+
+                        // Update category checkbox state
+                        eventHandlers.updateCategoryCheckboxState(category);
+
+                        // Update main select all checkbox state
+                        eventHandlers.updateMainSelectAllState();
+
                         $('#generateBtn').prop('disabled', state.selectedApps.size === 0);
                         utils.log('INFO', `${checkbox.is(':checked') ? 'Selected' : 'Deselected'} ${filename}`);
                     });
@@ -1232,6 +1839,31 @@
                         }
                     });
 
+                    // System alert event handlers
+                    $(document).on('click', '#recheckSystemBtn', async function() {
+                        const $btn = $(this);
+                        const originalText = $btn.html();
+
+                        $btn.html('🔄 Checking...').prop('disabled', true);
+
+                        try {
+                            const systemData = await appManager.checkSystemCompatibility();
+
+                            if (systemData && systemData.powerShell.available) {
+                                // PowerShell now available, reload the page or reinitialize
+                                location.reload();
+                            }
+                        } catch (error) {
+                            utils.log('ERROR', `System recheck failed: ${error.message}`);
+                        } finally {
+                            $btn.html(originalText).prop('disabled', false);
+                        }
+                    });
+
+                    $(document).on('click', '#closeSystemAlert', function() {
+                        $('#systemStatus').fadeOut();
+                    });
+
                     // Auto-refresh (optional)
                     if (config.refreshInterval > 0) {
                         setInterval(() => {
@@ -1240,19 +1872,66 @@
                             }
                         }, config.refreshInterval);
                     }
+                },
+
+                updateCategoryCheckboxState: function(category) {
+                    const categoryCheckbox = $(`.app-category-checkbox[data-category="${category}"]`);
+                    const categoryApps = $(`.app-card[data-category="${category}"] .app-checkbox:not(:disabled)`);
+                    const checkedApps = $(`.app-card[data-category="${category}"] .app-checkbox:not(:disabled):checked`);
+
+                    if (checkedApps.length === 0) {
+                        categoryCheckbox.prop('checked', false);
+                        categoryCheckbox.prop('indeterminate', false);
+                    } else if (checkedApps.length === categoryApps.length) {
+                        categoryCheckbox.prop('checked', true);
+                        categoryCheckbox.prop('indeterminate', false);
+                    } else {
+                        categoryCheckbox.prop('checked', false);
+                        categoryCheckbox.prop('indeterminate', true);
+                    }
+                },
+
+                updateMainSelectAllState: function() {
+                    const mainCheckbox = $('#selectAllApps');
+                    const allApps = $('.app-checkbox:not(:disabled)');
+                    const checkedApps = $('.app-checkbox:not(:disabled):checked');
+
+                    if (checkedApps.length === 0) {
+                        mainCheckbox.prop('checked', false);
+                        mainCheckbox.prop('indeterminate', false);
+                    } else if (checkedApps.length === allApps.length) {
+                        mainCheckbox.prop('checked', true);
+                        mainCheckbox.prop('indeterminate', false);
+                    } else {
+                        mainCheckbox.prop('checked', false);
+                        mainCheckbox.prop('indeterminate', true);
+                    }
                 }
             };
 
             // Initialize application
-            $(document).ready(function() {
+            $(document).ready(async function() {
                 utils.log('INFO', 'LaunchScript Manager initializing...');
-                
+
                 try {
                     eventHandlers.init();
-                    appManager.loadApps();
-                    utils.log('INFO', 'LaunchScript Manager initialized successfully');
+
+                    // Check system compatibility first
+                    const systemData = await appManager.checkSystemCompatibility();
+
+                    if (systemData && systemData.powerShell.available) {
+                        // PowerShell is available, proceed with normal initialization
+                        await appManager.loadApps();
+                        utils.log('INFO', 'LaunchScript Manager initialized successfully');
+                    } else {
+                        // PowerShell not available, show limited functionality
+                        utils.log('WARN', 'LaunchScript Manager initialized with limited functionality (PowerShell not available)');
+                        appManager.showLimitedFunctionality();
+                    }
+
                 } catch (error) {
                     utils.log('ERROR', `Failed to initialize application: ${error.message}`);
+                    appManager.showSystemError(error.message);
                 }
             });
 

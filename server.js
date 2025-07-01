@@ -21,6 +21,7 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs').promises;
+const os = require('os');
 
 // Configuration
 const CONFIG = {
@@ -43,13 +44,121 @@ app.use(express.static('.', {
 
 // Logging utility
 function log(level, message, component = 'Server') {
-    const timestamp = new Date().toLocaleTimeString('en-US', { 
-        hour12: true, 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit' 
+    const timestamp = new Date().toLocaleTimeString('en-US', {
+        hour12: true,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
     console.log(`[${timestamp}] [${component}] [${level}] ${message}`);
+}
+
+// OS Detection and PowerShell availability functions
+function getSystemInfo() {
+    const platform = os.platform();
+    const arch = os.arch();
+    const release = os.release();
+
+    return {
+        platform: platform,
+        architecture: arch,
+        release: release,
+        isWindows: platform === 'win32',
+        isMacOS: platform === 'darwin',
+        isLinux: platform === 'linux',
+        platformName: getPlatformName(platform),
+        downloadUrl: getPowerShellDownloadUrl(platform, arch)
+    };
+}
+
+function getPlatformName(platform) {
+    switch (platform) {
+        case 'win32': return 'Windows';
+        case 'darwin': return 'macOS';
+        case 'linux': return 'Linux';
+        default: return platform;
+    }
+}
+
+function getPowerShellDownloadUrl(platform, arch) {
+    const baseUrl = 'https://github.com/PowerShell/PowerShell/releases/latest';
+
+    switch (platform) {
+        case 'win32':
+            return arch === 'x64'
+                ? `${baseUrl}/download/PowerShell-7.4.6-win-x64.msi`
+                : `${baseUrl}/download/PowerShell-7.4.6-win-x86.msi`;
+        case 'darwin':
+            return arch === 'arm64'
+                ? `${baseUrl}/download/powershell-7.4.6-osx-arm64.pkg`
+                : `${baseUrl}/download/powershell-7.4.6-osx-x64.pkg`;
+        case 'linux':
+            return 'https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux';
+        default:
+            return 'https://github.com/PowerShell/PowerShell/releases/latest';
+    }
+}
+
+async function checkPowerShellAvailability() {
+    return new Promise((resolve) => {
+        const systemInfo = getSystemInfo();
+
+        // Determine PowerShell command based on OS
+        const psCommand = systemInfo.isWindows ? 'powershell' : 'pwsh';
+
+        log('DEBUG', `Checking PowerShell availability with command: ${psCommand}`);
+
+        const ps = spawn(psCommand, ['-Command', 'Write-Output "PowerShell Available"'], {
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        ps.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        ps.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        ps.on('close', (code) => {
+            const isAvailable = code === 0 && stdout.includes('PowerShell Available');
+            log('DEBUG', `PowerShell availability check result: ${isAvailable ? 'Available' : 'Not Available'}`);
+
+            resolve({
+                available: isAvailable,
+                command: psCommand,
+                version: isAvailable ? stdout.trim() : null,
+                error: !isAvailable ? stderr : null,
+                systemInfo: systemInfo
+            });
+        });
+
+        ps.on('error', (error) => {
+            log('DEBUG', `PowerShell availability check error: ${error.message}`);
+            resolve({
+                available: false,
+                command: psCommand,
+                version: null,
+                error: error.message,
+                systemInfo: systemInfo
+            });
+        });
+
+        // Set timeout for availability check
+        setTimeout(() => {
+            ps.kill();
+            resolve({
+                available: false,
+                command: psCommand,
+                version: null,
+                error: 'Timeout',
+                systemInfo: systemInfo
+            });
+        }, 5000);
+    });
 }
 
 // Validate script names to prevent injection attacks
@@ -76,10 +185,20 @@ function validateScriptNames(scripts) {
 }
 
 // Execute PowerShell detection service
-async function executeDetectionService(scripts, includeWindowsStore = false, includePortable = false) {
-    return new Promise((resolve, reject) => {
+async function executeDetectionService(scripts, includeWindowsStore = false, includePortable = false, includeWMI = true) {
+    return new Promise(async (resolve, reject) => {
         log('INFO', `Executing detection service for scripts: ${scripts}`);
-        
+
+        // Check PowerShell availability first
+        const psCheck = await checkPowerShellAvailability();
+        if (!psCheck.available) {
+            reject(new Error(`PowerShell not available: ${psCheck.error}`));
+            return;
+        }
+
+        const systemInfo = psCheck.systemInfo;
+        const psCommand = psCheck.command;
+
         // Build PowerShell command arguments
         const args = [
             '-ExecutionPolicy', 'Bypass',
@@ -87,19 +206,24 @@ async function executeDetectionService(scripts, includeWindowsStore = false, inc
             '-Scripts', scripts,
             '-OutputFormat', 'JSON'
         ];
-        
-        if (includeWindowsStore) {
+
+        // Only include Windows Store on Windows
+        if (includeWindowsStore && systemInfo.isWindows) {
             args.push('-IncludeWindowsStore');
         }
-        
+
         if (includePortable) {
             args.push('-IncludePortable');
         }
-        
-        log('DEBUG', `PowerShell command: powershell ${args.join(' ')}`);
-        
-        // Spawn PowerShell process
-        const ps = spawn('powershell', args, {
+
+        if (includeWMI) {
+            args.push('-IncludeWMI');
+        }
+
+        log('DEBUG', `PowerShell command: ${psCommand} ${args.join(' ')}`);
+
+        // Spawn PowerShell process with correct command
+        const ps = spawn(psCommand, args, {
             cwd: process.cwd(),
             stdio: ['pipe', 'pipe', 'pipe']
         });
@@ -195,12 +319,60 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// System information and PowerShell availability endpoint
+app.get('/api/system', async (req, res) => {
+    try {
+        log('INFO', 'Received system info request', 'API');
+
+        const psCheck = await checkPowerShellAvailability();
+
+        res.json({
+            success: true,
+            data: {
+                systemInfo: psCheck.systemInfo,
+                powerShell: {
+                    available: psCheck.available,
+                    command: psCheck.command,
+                    version: psCheck.version,
+                    error: psCheck.error
+                },
+                recommendations: {
+                    downloadUrl: psCheck.systemInfo.downloadUrl,
+                    installInstructions: getInstallInstructions(psCheck.systemInfo)
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        log('ERROR', `System info request failed: ${error.message}`, 'API');
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+function getInstallInstructions(systemInfo) {
+    switch (systemInfo.platform) {
+        case 'win32':
+            return 'Download and run the PowerShell MSI installer. Administrator privileges may be required.';
+        case 'darwin':
+            return 'Download and run the PowerShell PKG installer. You may need to allow installation from identified developers in System Preferences.';
+        case 'linux':
+            return 'Follow the installation instructions for your Linux distribution. Package managers like apt, yum, or snap can be used.';
+        default:
+            return 'Please visit the PowerShell GitHub releases page for installation instructions specific to your platform.';
+    }
+}
+
 // Application detection endpoint
 app.post('/api/detect', async (req, res) => {
     try {
         log('INFO', 'Received detection request', 'API');
 
-        const { scripts, includeWindowsStore = false, includePortable = false } = req.body;
+        const { scripts, includeWindowsStore = false, includePortable = false, includeWMI = true } = req.body;
 
         // Validate input
         const validation = validateScriptNames(scripts);
@@ -216,7 +388,8 @@ app.post('/api/detect', async (req, res) => {
         const result = await executeDetectionService(
             scripts,  // Use the original scripts parameter, not validation.scripts
             includeWindowsStore,
-            includePortable
+            includePortable,
+            includeWMI
         );
         
         // Return results

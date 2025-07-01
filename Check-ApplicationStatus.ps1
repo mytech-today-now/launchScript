@@ -20,7 +20,10 @@
     
 .PARAMETER IncludePortable
     Include portable application detection
-    
+
+.PARAMETER IncludeWMI
+    Include WMI-based detection using regex name extraction (default: true)
+
 .PARAMETER ScriptsPath
     Path to the scripts directory (default: ./scripts/)
     
@@ -56,7 +59,10 @@ param(
     
     [Parameter(HelpMessage = "Include portable applications")]
     [switch]$IncludePortable,
-    
+
+    [Parameter(HelpMessage = "Include WMI-based detection using regex name extraction")]
+    [switch]$IncludeWMI,
+
     [Parameter(HelpMessage = "Path to scripts directory")]
     [ValidateScript({Test-Path $_ -PathType Container})]
     [string]$ScriptsPath = "./scripts/"
@@ -64,6 +70,11 @@ param(
 
 # Set strict mode for better error handling
 Set-StrictMode -Version Latest
+
+# Set default for WMI detection if not explicitly disabled
+if (-not $PSBoundParameters.ContainsKey('IncludeWMI')) {
+    $IncludeWMI = $true
+}
 
 # Import shared helper functions
 $sharedPath = Join-Path $ScriptsPath "shared\HelperFunctions.ps1"
@@ -205,12 +216,16 @@ function Get-ApplicationInstallationStatus {
     )
     
     try {
-        Write-AppLog "Checking installation status for: $ScriptName" -Level INFO -Component "StatusChecker"
+        if ($OutputFormat -ne 'JSON') {
+            Write-AppLog "Checking installation status for: $ScriptName" -Level INFO -Component "StatusChecker"
+        }
         
         # Get detection configuration for this app
         $config = $script:AppDetectionConfig[$ScriptName]
         if (-not $config) {
-            Write-AppLog "No detection configuration found for: $ScriptName" -Level WARN -Component "StatusChecker"
+            if ($OutputFormat -ne 'JSON') {
+                Write-AppLog "No detection configuration found for: $ScriptName" -Level WARN -Component "StatusChecker"
+            }
             return @{
                 ScriptName = $ScriptName
                 AppName = $ScriptName -replace '\.ps1$', ''
@@ -243,12 +258,16 @@ function Get-ApplicationInstallationStatus {
                 # Ensure result has required properties
                 if ($result -and $result.ContainsKey('IsInstalled') -and $result.IsInstalled) {
                     $installationFound = $result
-                    Write-AppLog "Found installation using search pattern: $searchName" -Level DEBUG -Component "StatusChecker"
+                    if ($OutputFormat -ne 'JSON') {
+                        Write-AppLog "Found installation using search pattern: $searchName" -Level DEBUG -Component "StatusChecker"
+                    }
                     break
                 }
             }
             catch {
-                Write-AppLog "Error searching with pattern '$searchName': $($_.Exception.Message)" -Level WARN -Component "StatusChecker"
+                if ($OutputFormat -ne 'JSON') {
+                    Write-AppLog "Error searching with pattern '$searchName': $($_.Exception.Message)" -Level WARN -Component "StatusChecker"
+                }
                 continue
             }
         }
@@ -259,11 +278,37 @@ function Get-ApplicationInstallationStatus {
                 $fileSystemResult = Test-FileSystemInstallation -Config $config -ScriptName $ScriptName
                 if ($fileSystemResult -and $fileSystemResult.ContainsKey('IsInstalled') -and $fileSystemResult.IsInstalled) {
                     $installationFound = $fileSystemResult
-                    Write-AppLog "Found installation via file system detection" -Level DEBUG -Component "StatusChecker"
+                    if ($OutputFormat -ne 'JSON') {
+                        Write-AppLog "Found installation via file system detection" -Level DEBUG -Component "StatusChecker"
+                    }
                 }
             }
             catch {
-                Write-AppLog "File system detection failed: $($_.Exception.Message)" -Level WARN -Component "StatusChecker"
+                if ($OutputFormat -ne 'JSON') {
+                    Write-AppLog "File system detection failed: $($_.Exception.Message)" -Level WARN -Component "StatusChecker"
+                }
+            }
+        }
+
+        # If still not found, try WMI-based detection with regex name extraction
+        if (-not $installationFound.IsInstalled -and $IncludeWMI) {
+            try {
+                # Extract program names from search patterns
+                $extractedNames = Get-ExtractedProgramNames -SearchNames $config.SearchNames
+                if ($extractedNames.Count -gt 0) {
+                    $wmiResult = Find-SimilarSoftwareViaWMI -ProgramNames $extractedNames -ScriptName $ScriptName
+                    if ($wmiResult -and $wmiResult.ContainsKey('IsInstalled') -and $wmiResult.IsInstalled) {
+                        $installationFound = $wmiResult
+                        if ($OutputFormat -ne 'JSON') {
+                            Write-AppLog "Found installation via WMI detection with extracted names: $($extractedNames -join ', ')" -Level DEBUG -Component "StatusChecker"
+                        }
+                    }
+                }
+            }
+            catch {
+                if ($OutputFormat -ne 'JSON') {
+                    Write-AppLog "WMI detection failed: $($_.Exception.Message)" -Level WARN -Component "StatusChecker"
+                }
             }
         }
         
@@ -280,8 +325,10 @@ function Get-ApplicationInstallationStatus {
             CheckedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
         }
         
-        $statusText = if ($status.IsInstalled) { "INSTALLED" } else { "NOT INSTALLED" }
-        Write-AppLog "$($status.AppName): $statusText" -Level $(if ($status.IsInstalled) { "SUCCESS" } else { "INFO" }) -Component "StatusChecker"
+        if ($OutputFormat -ne 'JSON') {
+            $statusText = if ($status.IsInstalled) { "INSTALLED" } else { "NOT INSTALLED" }
+            Write-AppLog "$($status.AppName): $statusText" -Level $(if ($status.IsInstalled) { "SUCCESS" } else { "INFO" }) -Component "StatusChecker"
+        }
         
         return $status
     }
@@ -412,7 +459,8 @@ function Get-AvailableScripts {
             Where-Object { $_.Name -ne "shared" -and $_.Name -notlike "*Helper*" } |
             Select-Object -ExpandProperty Name
 
-        Write-AppLog "Found $($scriptFiles.Count) available scripts" -Level INFO -Component "StatusChecker"
+        $scriptCount = if ($scriptFiles) { @($scriptFiles).Count } else { 0 }
+        Write-AppLog "Found $scriptCount available scripts" -Level INFO -Component "StatusChecker"
         return $scriptFiles
     }
     catch {
@@ -449,11 +497,12 @@ function Format-Output {
 
                 $jsonOutput = @{
                     Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-                    TotalApps = $resultsArray.Count
-                    InstalledCount = $installedApps.Count
-                    NotInstalledCount = $notInstalledApps.Count
+                    TotalApps = @($resultsArray).Count
+                    InstalledCount = @($installedApps).Count
+                    NotInstalledCount = @($notInstalledApps).Count
                     IncludeWindowsStore = $IncludeWindowsStore.IsPresent
                     IncludePortable = $IncludePortable.IsPresent
+                    IncludeWMI = $IncludeWMI
                     Applications = $resultsArray
                 } | ConvertTo-Json -Depth 10 -Compress:$false
 
@@ -478,11 +527,19 @@ function Format-Output {
 
 # Main execution
 try {
-    Write-AppLog "=== Application Status Detection Service v1.0.0 ===" -Level INFO -Component "StatusChecker"
-    Write-AppLog "Scripts Path: $ScriptsPath" -Level INFO -Component "StatusChecker"
-    Write-AppLog "Include Windows Store: $($IncludeWindowsStore.IsPresent)" -Level INFO -Component "StatusChecker"
-    Write-AppLog "Include Portable: $($IncludePortable.IsPresent)" -Level INFO -Component "StatusChecker"
-    Write-AppLog "Output Format: $OutputFormat" -Level INFO -Component "StatusChecker"
+    # Suppress progress and verbose output when outputting JSON to avoid mixing with JSON output
+    if ($OutputFormat -eq 'JSON') {
+        $ProgressPreference = 'SilentlyContinue'
+        $InformationPreference = 'SilentlyContinue'
+        $VerbosePreference = 'SilentlyContinue'
+        $Global:OutputFormat = 'JSON'  # Make this available to helper functions
+    } else {
+        Write-AppLog "=== Application Status Detection Service v1.0.0 ===" -Level INFO -Component "StatusChecker"
+        Write-AppLog "Scripts Path: $ScriptsPath" -Level INFO -Component "StatusChecker"
+        Write-AppLog "Include Windows Store: $($IncludeWindowsStore.IsPresent)" -Level INFO -Component "StatusChecker"
+        Write-AppLog "Include Portable: $($IncludePortable.IsPresent)" -Level INFO -Component "StatusChecker"
+        Write-AppLog "Output Format: $OutputFormat" -Level INFO -Component "StatusChecker"
+    }
 
     # Determine which scripts to check
     if ($Scripts) {
@@ -493,15 +550,21 @@ try {
             }
             $scriptName
         })
-        Write-AppLog "Checking specific scripts: $($scriptsToCheck -join ', ')" -Level INFO -Component "StatusChecker"
+        if ($OutputFormat -ne 'JSON') {
+            Write-AppLog "Checking specific scripts: $($scriptsToCheck -join ', ')" -Level INFO -Component "StatusChecker"
+        }
     }
     else {
         $scriptsToCheck = Get-AvailableScripts
-        Write-AppLog "Checking all available scripts" -Level INFO -Component "StatusChecker"
+        if ($OutputFormat -ne 'JSON') {
+            Write-AppLog "Checking all available scripts" -Level INFO -Component "StatusChecker"
+        }
     }
 
-    if ($scriptsToCheck.Count -eq 0) {
-        Write-AppLog "No scripts found to check" -Level WARN -Component "StatusChecker"
+    if (@($scriptsToCheck).Count -eq 0) {
+        if ($OutputFormat -ne 'JSON') {
+            Write-AppLog "No scripts found to check" -Level WARN -Component "StatusChecker"
+        }
         $emptyResult = @{
             Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
             TotalApps = 0
@@ -528,28 +591,41 @@ try {
 
     foreach ($scriptName in $scriptsToCheck) {
         $currentScript++
-        Write-Progress -Activity "Checking Application Status" -Status "Processing $scriptName" -PercentComplete (($currentScript / $scriptsToCheck.Count) * 100)
+        $totalScripts = @($scriptsToCheck).Count
+
+        # Only show progress when not outputting JSON
+        if ($OutputFormat -ne 'JSON') {
+            Write-Progress -Activity "Checking Application Status" -Status "Processing $scriptName" -PercentComplete (($currentScript / $totalScripts) * 100)
+        }
 
         $status = Get-ApplicationInstallationStatus -ScriptName $scriptName
         $results += @($status)  # Ensure it's always treated as an array
     }
 
-    Write-Progress -Activity "Checking Application Status" -Completed
+    # Complete progress only when not outputting JSON
+    if ($OutputFormat -ne 'JSON') {
+        Write-Progress -Activity "Checking Application Status" -Completed
+    }
 
     # Format and output results
     $output = Format-Output -Results $results -Format $OutputFormat
     Write-Output $output
 
-    # Log summary
-    $installedCount = ($results | Where-Object { $_.IsInstalled }).Count
-    $totalCount = $results.Count
-    Write-AppLog "Status check completed: $installedCount/$totalCount applications installed" -Level SUCCESS -Component "StatusChecker"
+    # Log summary only when not outputting JSON
+    if ($OutputFormat -ne 'JSON') {
+        $installedApps = @($results | Where-Object { $_.IsInstalled })
+        $installedCount = $installedApps.Count
+        $totalCount = @($results).Count
+        Write-AppLog "Status check completed: $installedCount/$totalCount applications installed" -Level SUCCESS -Component "StatusChecker"
+    }
 
     exit 0
 }
 catch {
-    Write-AppLog "Fatal error in status detection: $($_.Exception.Message)" -Level ERROR -Component "StatusChecker"
-    Write-AppLog "Stack trace: $($_.ScriptStackTrace)" -Level DEBUG -Component "StatusChecker"
+    if ($OutputFormat -ne 'JSON') {
+        Write-AppLog "Fatal error in status detection: $($_.Exception.Message)" -Level ERROR -Component "StatusChecker"
+        Write-AppLog "Stack trace: $($_.ScriptStackTrace)" -Level DEBUG -Component "StatusChecker"
+    }
 
     # Return error in requested format
     $errorResult = @{
@@ -559,6 +635,7 @@ catch {
         NotInstalledCount = 0
         IncludeWindowsStore = $IncludeWindowsStore.IsPresent
         IncludePortable = $IncludePortable.IsPresent
+        IncludeWMI = $IncludeWMI
         Applications = @()
         Error = $_.Exception.Message
     }

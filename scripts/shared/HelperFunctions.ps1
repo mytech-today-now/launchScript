@@ -49,18 +49,24 @@ function Write-AppLog {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
-        
+
         [Parameter()]
         [ValidateSet('INFO', 'WARN', 'ERROR', 'SUCCESS', 'DEBUG')]
         [string]$Level = 'INFO',
-        
+
         [Parameter()]
         [string]$Component = 'Helper'
     )
-    
+
+    # Check if we should suppress output (when JSON output is requested)
+    $globalOutputFormat = Get-Variable -Name 'OutputFormat' -Scope Global -ErrorAction SilentlyContinue -ValueOnly
+    if ($globalOutputFormat -eq 'JSON') {
+        return
+    }
+
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "[$timestamp] [$Component] [$Level] $Message"
-    
+
     switch ($Level) {
         'ERROR' { Write-Host $logEntry -ForegroundColor Red }
         'WARN' { Write-Host $logEntry -ForegroundColor Yellow }
@@ -808,6 +814,192 @@ function Test-ExecutableSignature {
     catch {
         Write-AppLog "Failed to verify digital signature: $($_.Exception.Message)" -Level ERROR
         return $false
+    }
+}
+
+#endregion
+
+#region Enhanced Detection Functions
+
+function Get-ExtractedProgramNames {
+    <#
+    .SYNOPSIS
+        Extract core program names from SearchNames patterns using regex
+    .PARAMETER SearchNames
+        Array of search name patterns (with wildcards)
+    .OUTPUTS
+        Array of cleaned program names suitable for WMI querying
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$SearchNames
+    )
+
+    try {
+        $extractedNames = @()
+
+        foreach ($searchName in $SearchNames) {
+            # Remove wildcards and clean the name
+            $cleanName = $searchName -replace '\*', ''
+
+            # Split on common separators and filter out common words
+            $nameParts = @($cleanName -split '[\s\-_\.]' | Where-Object {
+                $_ -and
+                $_.Length -gt 2 -and
+                $_ -notmatch '^(the|and|or|for|with|by|from|to|in|on|at|of|a|an)$' -and
+                $_ -notmatch '^\d+$' -and
+                $_ -notmatch '^(exe|app|application|software|program|tool|utility)$'
+            })
+
+            # Add individual parts
+            foreach ($part in $nameParts) {
+                if ($part.Length -gt 2 -and $extractedNames -notcontains $part) {
+                    $extractedNames += $part
+                }
+            }
+
+            # Add the full cleaned name if it's meaningful
+            if ($nameParts -and @($nameParts).Count -gt 0) {
+                $fullCleanName = (@($nameParts) -join ' ').Trim()
+                if ($fullCleanName.Length -gt 2 -and $extractedNames -notcontains $fullCleanName) {
+                    $extractedNames += $fullCleanName
+                }
+            }
+            elseif ($cleanName.Length -gt 2 -and $extractedNames -notcontains $cleanName) {
+                # If no parts were found, use the clean name itself
+                $extractedNames += $cleanName
+            }
+
+            # Extract camelCase components (e.g., "AngryIPScanner" -> "Angry", "IP", "Scanner")
+            if ($cleanName -cmatch '[a-z][A-Z]') {
+                $camelParts = @($cleanName -creplace '([a-z])([A-Z])', '$1 $2' -split '\s+' | Where-Object {
+                    $_ -and $_.Length -gt 2
+                })
+                foreach ($part in $camelParts) {
+                    if ($extractedNames -notcontains $part) {
+                        $extractedNames += $part
+                    }
+                }
+            }
+        }
+
+        Write-AppLog "Extracted $($extractedNames.Count) program names from $($SearchNames.Count) search patterns" -Level DEBUG -Component "NameExtractor"
+        return $extractedNames
+    }
+    catch {
+        Write-AppLog "Error extracting program names: $($_.Exception.Message)" -Level ERROR -Component "NameExtractor"
+        return @()
+    }
+}
+
+function Find-SimilarSoftwareViaWMI {
+    <#
+    .SYNOPSIS
+        Use WMI Win32_Product to find installed software similar to extracted program names
+    .PARAMETER ProgramNames
+        Array of program names to search for
+    .PARAMETER ScriptName
+        Script name for logging context
+    .OUTPUTS
+        Hashtable with installation details if similar software found
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$ProgramNames,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptName
+    )
+
+    try {
+        Write-AppLog "Searching for similar software via WMI for: $ScriptName" -Level DEBUG -Component "WMIDetector"
+
+        # Get all installed products via WMI (this can be slow, so we cache it)
+        if (-not (Get-Variable -Name "CachedWMIProducts" -Scope Script -ErrorAction SilentlyContinue)) {
+            Write-AppLog "Caching WMI product list (this may take a moment)..." -Level INFO -Component "WMIDetector"
+            $script:CachedWMIProducts = Get-WmiObject -Class Win32_Product -ErrorAction SilentlyContinue
+            Write-AppLog "Cached $(@($script:CachedWMIProducts).Count) WMI products" -Level DEBUG -Component "WMIDetector"
+        }
+
+        if (-not $script:CachedWMIProducts) {
+            Write-AppLog "WMI product query failed or returned no results" -Level WARN -Component "WMIDetector"
+            return @{
+                IsInstalled = $false
+                DisplayName = $null
+                Version = $null
+                Publisher = $null
+                InstallLocation = $null
+                Source = $null
+                InstallDate = $null
+            }
+        }
+
+        # Search for matches using regex patterns
+        foreach ($programName in $ProgramNames) {
+            if ($programName.Length -lt 3) { continue }
+
+            # Create a flexible regex pattern
+            $regexPattern = [regex]::Escape($programName) -replace '\\', '.*'
+
+            foreach ($product in $script:CachedWMIProducts) {
+                if (-not $product.Name) { continue }
+
+                # Try exact match first
+                if ($product.Name -like "*$programName*") {
+                    Write-AppLog "Found exact match via WMI: $($product.Name)" -Level SUCCESS -Component "WMIDetector"
+                    return @{
+                        IsInstalled = $true
+                        DisplayName = $product.Name
+                        Version = $product.Version
+                        Publisher = $product.Vendor
+                        InstallLocation = $product.InstallLocation
+                        Source = 'WMI'
+                        InstallDate = if ($product.InstallDate) {
+                            [datetime]::ParseExact($product.InstallDate.Substring(0,8), 'yyyyMMdd', $null).ToString('yyyyMMdd')
+                        } else { $null }
+                    }
+                }
+
+                # Try regex match for more flexible matching
+                if ($product.Name -match $regexPattern) {
+                    Write-AppLog "Found regex match via WMI: $($product.Name) (pattern: $regexPattern)" -Level SUCCESS -Component "WMIDetector"
+                    return @{
+                        IsInstalled = $true
+                        DisplayName = $product.Name
+                        Version = $product.Version
+                        Publisher = $product.Vendor
+                        InstallLocation = $product.InstallLocation
+                        Source = 'WMI'
+                        InstallDate = if ($product.InstallDate) {
+                            [datetime]::ParseExact($product.InstallDate.Substring(0,8), 'yyyyMMdd', $null).ToString('yyyyMMdd')
+                        } else { $null }
+                    }
+                }
+            }
+        }
+
+        Write-AppLog "No similar software found via WMI for: $ScriptName" -Level DEBUG -Component "WMIDetector"
+        return @{
+            IsInstalled = $false
+            DisplayName = $null
+            Version = $null
+            Publisher = $null
+            InstallLocation = $null
+            Source = $null
+            InstallDate = $null
+        }
+    }
+    catch {
+        Write-AppLog "WMI detection failed for $ScriptName`: $($_.Exception.Message)" -Level WARN -Component "WMIDetector"
+        return @{
+            IsInstalled = $false
+            DisplayName = $null
+            Version = $null
+            Publisher = $null
+            InstallLocation = $null
+            Source = $null
+            InstallDate = $null
+        }
     }
 }
 

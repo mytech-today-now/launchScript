@@ -88,19 +88,74 @@ LaunchScript Manager provides a modern web interface for managing and executing 
 ## System Requirements
 
 - **Operating System**: Windows 10/11 or Windows Server 2016+
-- **PowerShell**: Version 5.1 or PowerShell 7+
+- **PowerShell**:
+  - **Windows**: PowerShell 5.1+ or PowerShell 7+
+  - **macOS/Linux**: PowerShell 7+ (pwsh)
+- **Node.js**: Version 14+ (for web server functionality)
 - **Privileges**: Administrator rights recommended for most installations
 - **Network**: Internet connection for downloading applications
 - **Browser**: Modern web browser with JavaScript enabled
 
+## 🌍 Cross-Platform Support
+
+LaunchScript Manager now supports **Windows**, **macOS**, and **Linux**:
+
+### Platform-Specific Features
+- **Windows**: Full functionality with Windows PowerShell 5.1+ or PowerShell 7+
+- **macOS**: Requires PowerShell 7+ installation, automatic download links provided
+- **Linux**: Requires PowerShell 7+ installation, automatic download links provided
+
+### PowerShell Installation Detection
+The application automatically detects PowerShell availability and provides:
+- **Real-time system compatibility checking**
+- **Automatic download links** for the correct PowerShell version and architecture
+- **Installation instructions** specific to your operating system
+- **Graceful fallback** when PowerShell is not available
+
 ## Quick Start
 
+### Windows
 1. **Clone or download** this repository to your local machine
-2. **Open** `index.html` in your web browser
-3. **Browse** available applications in the grid
-4. **Select** applications you want to install by checking the boxes
-5. **Click** "Generate Command" to create the PowerShell command
-6. **Copy** the generated command and run it in PowerShell as Administrator
+2. **Open PowerShell as Administrator**
+3. **Navigate** to the project directory
+4. **Run the startup script**:
+   ```powershell
+   .\start-server.ps1
+   ```
+5. **Open your browser** to `http://localhost:3000`
+
+### macOS
+1. **Clone or download** this repository to your local machine
+2. **Open Terminal**
+3. **Navigate** to the project directory
+4. **Make the script executable** (first time only):
+   ```bash
+   chmod +x start-server.sh
+   ```
+5. **Run the startup script**:
+   ```bash
+   ./start-server.sh
+   ```
+6. **Open your browser** to `http://localhost:3000`
+
+### Linux
+1. **Clone or download** this repository to your local machine
+2. **Open Terminal**
+3. **Navigate** to the project directory
+4. **Make the script executable** (first time only):
+   ```bash
+   chmod +x start-server.sh
+   ```
+5. **Run the startup script**:
+   ```bash
+   ./start-server.sh
+   ```
+6. **Open your browser** to `http://localhost:3000`
+
+### Alternative: Direct File Access
+If you prefer not to use the web server:
+1. **Open** `index.html` directly in your web browser
+2. **Note**: Some features may be limited without the server
 
 ## File Structure
 
